@@ -9,7 +9,7 @@ namespace elker {
 	class TradeUp;
 
 	static constexpr int g_nLevels = 5;
-	static constexpr std::array<float, g_nLevels> g_Levels = { 0.06f, 0.14f, 0.37f, 0.44f, 0.725f};
+	static constexpr std::array<float, g_nLevels> g_Levels = { 0.06f, 0.11f, 0.265f, 0.415f, 0.725f};
 	class Calculator {
 	public:
 		Calculator(std::shared_ptr<SkinDB> db);
@@ -37,21 +37,21 @@ namespace elker {
 	public:
 		TradeUp(size_t n, int l) : nSkins(n), level(l), computed(false) {
 			mask.resize(nSkins);
-			cost = grossreturn = netreturn = variance = stddev = vmr = 0;
+			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
 
 			Clear();
 		}
 
 		void Clear() {
 			computed = false;
-			cost = grossreturn = netreturn = variance = stddev = vmr = 0;
+			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
 			for (int i = 0; i < nSkins; i++) {
 				mask(i) = 0;
 			}
 		}
 	public:
 		float cost, grossreturn, netreturn;
-		float variance, stddev, vmr;
+		float variance, stddev, vmr, profitchance, ev;
 		Eigen::VectorXf probability;
 
 		bool computed;

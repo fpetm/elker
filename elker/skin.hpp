@@ -89,11 +89,12 @@ namespace elker {
 
 	class Skin {
 	public:
-		Skin(std::string name, std::array<float, SkinCondition::Max> prices, SkinRarity rarity, WeaponType weapontype, float wmin, float wmax, size_t id, size_t cid) :
-			m_Name(name), m_Prices(prices), m_Rarity(rarity), m_WeaponType(weapontype), wear_min(wmin), wear_max(wmax), m_ID(id), m_CollectionID(cid) {}
+		Skin(std::string name, std::array<float, SkinCondition::Max> prices_sell, std::array<float, SkinCondition::Max> prices_buy, SkinRarity rarity, WeaponType weapontype, float wmin, float wmax, size_t id, size_t cid) :
+			m_Name(name), m_PricesSell(prices_sell), m_PricesBuy(prices_buy), m_Rarity(rarity), m_WeaponType(weapontype), wear_min(wmin), wear_max(wmax), m_ID(id), m_CollectionID(cid) {}
 	public:
 		std::string m_Name;
-		std::array<float, SkinCondition::Max> m_Prices;
+		std::array<float, SkinCondition::Max> m_PricesSell;
+		std::array<float, SkinCondition::Max> m_PricesBuy;
 		SkinRarity m_Rarity;
 		WeaponType m_WeaponType;
 		size_t m_CollectionID;
@@ -137,7 +138,7 @@ namespace elker {
 
 	class SkinDB {
 	public:
-		SkinDB(std::string skinpath = "C:/prog/elker/skins_small.csv");
+		SkinDB(std::string skinpath = "C:/prog/elker/skins.csv");
 		void AddCollection(SkinCollection &collection) {
 			m_Collections.push_back(collection);
 			for (auto& skin : collection) {
@@ -157,4 +158,5 @@ namespace elker {
 	std::string StringFromWeaponType(WeaponType type);
 	std::string StringFromWeaponCondition(SkinCondition condition);
 	SkinCondition ConditionFromFloat(float f, bool st);
+	SkinCondition MapCondition(const Skin& skin, float wear, bool stattrak);
 }

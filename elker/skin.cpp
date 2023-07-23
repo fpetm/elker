@@ -142,13 +142,13 @@ namespace elker {
         if (f < 0 || f > 1) return SkinCondition::Max;
 
         if (st) {
-            if (f > 0.00f && f <= 0.07f) return SkinCondition::FN_ST;
+            if (f >= 0.00f && f <= 0.07f) return SkinCondition::FN_ST;
             else if (f > 0.07f && f <= 0.15f) return SkinCondition::MW_ST;
             else if (f > 0.15f && f <= 0.38f) return SkinCondition::FT_ST;
             else if (f > 0.38f && f <= 0.45f) return SkinCondition::WW_ST;
             else if (f > 0.45f && f <= 1.00f) return SkinCondition::BS_ST;
         } else {
-            if (f > 0.00f && f <= 0.07f) return SkinCondition::FN;
+            if (f >= 0.00f && f <= 0.07f) return SkinCondition::FN;
             else if (f > 0.07f && f <= 0.15f) return SkinCondition::MW;
             else if (f > 0.15f && f <= 0.38f) return SkinCondition::FT;
             else if (f > 0.38f && f <= 0.45f) return SkinCondition::WW;
@@ -156,8 +156,24 @@ namespace elker {
         }
     }
 
+    SkinCondition MapCondition(const Skin& skin, float wear, bool stattrak) {
+        const float newfloat = (skin.wear_max - skin.wear_min) * wear + skin.wear_min;
+        return ConditionFromFloat(newfloat, stattrak);
+    }
+
     SkinDB::SkinDB(std::string skinpath) {
         auto data = parseCSV(skinpath);
+
+        for (auto& row : data) {
+            if (row[0] == "NAME") continue;
+            std::string collection = row[1];
+            if (m_Collections.size() == 0) {
+                m_Collections.push_back(SkinCollection(collection, 0));
+            }
+            else if (m_Collections[m_Collections.size() - 1].m_Name != collection) {
+                m_Collections.push_back(SkinCollection(collection, m_Collections.size()));
+            }
+        }
 
         for (auto& row : data) {
             if (row[0] == "NAME") continue;
@@ -165,23 +181,23 @@ namespace elker {
             WeaponType type = WeaponTypeFromString(row[3]);
             SkinRarity rarity = Contraband;
             std::string collection = row[1];
-            std::array<float, SkinCondition::Max> price = { 0 };
+            std::array<float, SkinCondition::Max> price_sell = { 0 }, price_buy = { 0 };
             float wear_min = std::stof(row[4]);
             float wear_max = std::stof(row[5]);
 
-            for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) { 
-                if (row[4 + (int)condition] == "") {
-                    price[condition] = -1;
+            for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
+                if (row[6 + (int)condition] == "") {
+                    price_sell[condition] = -1;
                     continue;
                 }
-                price[condition] = std::stof(row[6 + (int)condition]);
+                price_sell[condition] = std::stof(row[6 + (int)condition]);
             }
-
-            if (m_Collections.size() == 0) {
-                m_Collections.push_back(SkinCollection(collection, 0));
-            }
-            else if (m_Collections[m_Collections.size()-1].m_Name != collection) {
-                m_Collections.push_back(SkinCollection(collection, m_Collections.size()));
+            for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
+                if (row[16 + (int)condition] == "") {
+                    price_buy[condition] = -1;
+                    continue;
+                }
+                price_buy[condition] = std::stof(row[6 + (int)condition]);
             }
 
             if (row[2] == "Consumer Grade") rarity = SkinRarity::Consumer;
@@ -191,19 +207,25 @@ namespace elker {
             else if (row[2] == "Classified") rarity = SkinRarity::Classified;
             else if (row[2] == "Covert") rarity = SkinRarity::Covert;
             else if (row[2] == "Contraband") rarity = SkinRarity::Contraband;
-            else std::cout << row[0] << " : " << "unknown rarity " << row[2] << "\n";
+            else EK_ERROR("Unknown rarity (skin: {}): {}", row[0], row[2]);
 
-            m_Collections[m_Collections.size() - 1].AddSkin(Skin(name, price, rarity, type, wear_min, wear_max, m_Skins.size(), m_Collections.size()-1));
-            m_Skins.push_back(m_Collections[m_Collections.size()-1].LastSkin());
+            for (SkinCollection& coll : m_Collections) {
+                if (coll.m_Name == collection) {
+                    coll.AddSkin(Skin(name, price_sell, price_buy, rarity, type, wear_min, wear_max, m_Skins.size(), coll.m_ID));
+                    m_Skins.push_back(coll.LastSkin());
+                }
+            }
+
         }
         for (SkinCollection &collection : m_Collections) {
             SkinRarity highest = SkinRarity::Consumer;
             for (Skin skin : collection) {
                 highest = highest < skin.m_Rarity ? skin.m_Rarity : highest;
             }
+            collection.m_HighestRarity = highest;
             for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
                 for (Skin &skin : collection) {
-                    if (skin.m_Rarity == collection.m_HighestRarity || skin.m_Prices[condition] < 0) {
+                    if (skin.m_Rarity >= collection.m_HighestRarity || skin.m_PricesSell[condition] <= 0.03 || skin.m_PricesBuy[condition] <= 0.03) {
                         skin.m_Banned[condition] = true;
                         m_Skins[skin.m_ID].m_Banned[condition] = true;
                     }
@@ -213,7 +235,6 @@ namespace elker {
                     }
                 }
             }
-            collection.m_HighestRarity = highest;
         }
 
         EK_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(), m_Collections.size());

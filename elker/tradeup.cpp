@@ -7,6 +7,8 @@
 #include "log.hpp"
 
 namespace elker {
+
+
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
 		const size_t skinc = db->GetSkins().size();
 		for (int level = 0; level < g_nLevels * 2; level++) {
@@ -28,15 +30,14 @@ namespace elker {
 			}
 		}
 
-		for (Skin &skin : db->GetSkins()) {
+		for (const Skin &skin : db->GetSkins()) {
 			for (int level = 0; level < g_nLevels * 2; level++) {
-				float mapped = (skin.wear_max-skin.wear_min)*g_Levels[level / 2] + skin.wear_min;
 				SkinCondition condition = ConditionFromFloat(g_Levels[level/2], level & 1);
-				SkinCondition mapped_condition = ConditionFromFloat(mapped, level & 1);
+				SkinCondition mapped_condition = MapCondition(skin, g_Levels[level/2], level&1);
 
-				m_Prices[level](skin.m_ID) = skin.m_Prices[condition];
-				m_MappedPrices[level](skin.m_ID) = skin.m_Prices[mapped_condition];
-				m_MappedPricesWithFees[level](skin.m_ID) = skin.m_Prices[mapped_condition] * 0.85f;
+				m_Prices[level](skin.m_ID) = skin.m_PricesSell[condition];
+				m_MappedPrices[level](skin.m_ID) = skin.m_PricesBuy[mapped_condition];
+				m_MappedPricesWithFees[level](skin.m_ID) = skin.m_PricesBuy[mapped_condition] * 0.85f;
 			}
 		}
 
@@ -92,51 +93,44 @@ namespace elker {
 		tradeup.variance = tradeup.probability.dot(m2);
 		tradeup.stddev = std::sqrt(tradeup.variance);
 		tradeup.vmr = tradeup.variance / tradeup.grossreturn;
+		tradeup.profitchance = (m_MappedPricesWithFees[tradeup.level].array() - tradeup.cost).array().cwiseSign().cwiseMax(0).matrix().dot(tradeup.probability);
+		tradeup.ev = tradeup.grossreturn - tradeup.cost;
 	}
 
 	std::string Calculator::ExportTradeUp(TradeUp& tradeup) {
 		if (tradeup.computed == false) return "";
 		ComputeStatistical(tradeup);
 		std::stringstream ss;
-		std::vector<Skin> skins;
-		std::vector<int> amounts;
-		
-		for (int i = 0; i < tradeup.nSkins; i++) {
-			if (tradeup.mask(i) > 0.0f) {
-				SkinCondition condition = ConditionFromFloat(g_Levels[tradeup.level / 2], tradeup.level & 1);
-				if (m_DB->GetSkins()[i].m_Rarity >= m_DB->GetCollections()[m_DB->GetSkins()[i].m_CollectionID].m_HighestRarity) return "";
-				if (m_DB->GetSkins()[i].m_Prices[condition] < 0) return "";
-				skins.push_back(m_DB->GetSkins().at(i));
-				amounts.push_back(static_cast<int>(tradeup.mask(i)));
-			}
-		}
+		const std::vector<Skin> skins = m_DB->GetSkins();
 
 		ss << tradeup.cost << ",";
+		ss << tradeup.ev << ",";
 		ss << tradeup.grossreturn - tradeup.cost << ",";
 		ss << (tradeup.grossreturn / tradeup.cost - 1.0f) * 100.0f << ",";
 		ss << tradeup.netreturn - tradeup.cost << ",";
 		ss << (tradeup.netreturn / tradeup.cost - 1.0f) * 100.0f << ",";
+		ss << tradeup.profitchance * 100.0f << ",";
 		ss << tradeup.variance << ",";
 		ss << tradeup.stddev << ",";
 		ss << tradeup.vmr << ",";
 
 		ss << g_Levels[tradeup.level / 2] << ",";
 		ss << std::to_string(tradeup.level & 1) << ",";
-
-
-		for (int i = 0; i < skins.size(); i++) {
-			for (int j = 0; j < amounts[i]; j++) {
-				ss << StringFromWeaponType(skins[i].m_WeaponType) << " | " << skins[i].m_Name << ",";
+		
+		for (int i = 0; i < tradeup.nSkins; i++) {
+			if (tradeup.mask(i) > 0.0f) {
+				const int amount = static_cast<int>(tradeup.mask(i));
+				for (int j = 0; j < amount; j++)
+					ss << StringFromWeaponType(skins[i].m_WeaponType) << " | " << skins[i].m_Name << ",";
 			}
-			//std::cout << amounts[i] << "x " << StringFromWeaponType(skins[i].m_WeaponType) << " | " << skins[i].m_Name << " (" << StringFromWeaponCondition(tradeup.condition) << ") + ";
 		}
 
 		std::vector<Skin> outskins;
 		std::vector<float> chances;
 		for (int i = 0; i < tradeup.nSkins; i++) {
 			if (tradeup.probability(i) > 0.0f) {
-				SkinCondition condition = ConditionFromFloat(g_Levels[tradeup.level / 2], tradeup.level & 1);
-				ss << StringFromWeaponType(m_DB->GetSkins()[i].m_WeaponType) << " | " << m_DB->GetSkins()[i].m_Name << "," << std::to_string(m_DB->GetSkins()[i].m_Prices[condition]) << "," << std::to_string(tradeup.probability(i)) << ",";
+				const SkinCondition condition = MapCondition(skins[i], g_Levels[tradeup.level / 2], tradeup.level & 1);
+				ss << StringFromWeaponType(skins[i].m_WeaponType) << " | " << skins[i].m_Name << "," << std::to_string(skins[i].m_PricesSell[condition]) << "," << std::to_string(tradeup.probability(i)) << ",";
 			}
 		}
 
@@ -144,16 +138,17 @@ namespace elker {
 		return ss.str();
 	}
 
-//#define L2
+#define L2
 //#define L3
 
 	void BruteforceCondition(const Calculator &calculator, int level, std::vector<TradeUp> &tradeups) {
 		size_t nSkins = calculator.m_DB->m_Skins.size();
+		const SkinCondition condition = ConditionFromFloat(g_Levels[level / 2], level&1);
 
 		TradeUp tradeup(nSkins, level);
 		for (size_t id1 = 0; id1 < nSkins; id1++) {		
 			const Skin s1 = calculator.m_DB->m_Skins[id1];
-			if (s1.m_Banned[level]) continue;
+			if (s1.m_Banned[condition]) continue;
 			const SkinRarity rarity = s1.m_Rarity;
 
 			tradeup.mask(id1) = 10;
@@ -165,22 +160,8 @@ namespace elker {
 			for (size_t id2 = id1+1; id2 < nSkins; id2++) {
 				const Skin s2 = calculator.m_DB->m_Skins[id2];
 
-				if (s2.m_Banned[level]) continue;
+				if (s2.m_Banned[condition]) continue;
 				if (s1.m_Rarity != s2.m_Rarity) continue;
-
-#if 0 // the new method
-				for (int i = 0; i < 10 * 10; i++) {
-					const float A = i / 10;
-					const float B = i % 10;
-					if (B < A) continue;
-
-					tradeup.mask(id1) = A;
-					tradeup.mask(id2) = B;
-
-					if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-					tradeup.Clear();
-				}
-#endif
 
 				for (float v1 = 1.0f; v1 <= 9.0f; v1 += 1.0f) {
 					const float A = v1;
@@ -195,7 +176,7 @@ namespace elker {
 #ifdef L3
 				for (size_t id3 = id1 + 1; id3 < nSkins; id3++) {
 					const Skin s3 = calculator.m_DB->m_Skins[id3];
-					if (s3.m_Banned[level]) continue;
+					if (s3.m_Banned[condition]) continue;
 					if (s3.m_Rarity != rarity) continue;
 					for (float v1 = 1.0f; v1 <= 8.0f; v1 += 1.0f) {
 						for (float v2 = v1 + 1.0f; v2 <= 9.0f; v2 += 1.0f) {
@@ -220,7 +201,7 @@ namespace elker {
 	void Calculator::Bruteforce() {
 		EK_INFO("Bruteforcing...");
 		std::ofstream of("b:/out.csv");
-		of << "Cost,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
+		of << "Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
 		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
 		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i+1 << "," << "Chance" << i + 1 << ",";
 		of << "\n";
