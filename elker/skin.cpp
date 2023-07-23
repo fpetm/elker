@@ -34,6 +34,46 @@ namespace elker {
         return data;
     }
 
+    static WeaponType WeaponTypeFromString(std::string s) {
+        if (s == "CZ75-Auto") return WeaponType::CZ75Auto;
+        if (s == "Desert Eagle") return WeaponType::DesertEagle;
+        if (s == "Dual Berettas") return WeaponType::DualBerettas;
+        if (s == "Five-SeveN") return WeaponType::FiveSeVen;
+        if (s == "Glock-18") return WeaponType::Glock18;
+        if (s == "P2000") return WeaponType::P2000;
+        if (s == "P250") return WeaponType::P250;
+        if (s == "R8 Revolver") return WeaponType::R8Revolver;
+        if (s == "Tec-9") return WeaponType::Tec9;
+        if (s == "USP-S") return WeaponType::USPS;
+        if (s == "MAG-7") return WeaponType::MAG7;
+        if (s == "Nova") return WeaponType::Nova;
+        if (s == "Sawed-Off") return WeaponType::SawedOff;
+        if (s == "XM1014") return WeaponType::XM1014;
+        if (s == "M249") return WeaponType::M249;
+        if (s == "Negev") return WeaponType::Negev;
+        if (s == "MAC-10") return WeaponType::MAC10;
+        if (s == "MP5-SD") return WeaponType::MP5SD;
+        if (s == "MP7") return WeaponType::MP7;
+        if (s == "MP9") return WeaponType::MP9;
+        if (s == "P90") return WeaponType::P90;
+        if (s == "PP-Bizon") return WeaponType::PPBizon;
+        if (s == "UMP-45") return WeaponType::UMP45;
+        if (s == "AK-47") return WeaponType::AK47;
+        if (s == "AUG") return WeaponType::AUG;
+        if (s == "FAMAS") return WeaponType::FAMAS;
+        if (s == "Galil AR") return WeaponType::Galil;
+        if (s == "M4A1-S") return WeaponType::M4A1S;
+        if (s == "M4A4") return WeaponType::M4A4;
+        if (s == "SG 553") return WeaponType::SG553;
+        if (s == "AWP") return WeaponType::AWP;
+        if (s == "SSG 08") return WeaponType::SSG08;
+        if (s == "G3SG1") return WeaponType::G3SG1;
+        if (s == "SCAR-20") return WeaponType::SCAR20;
+
+        std::cout << s << "\n";
+        return WeaponType::None;
+    }
+
     SkinDB::SkinDB(std::string skinpath) {
         auto data = parseCSV(skinpath);
 
@@ -41,7 +81,7 @@ namespace elker {
             if (row[0] == "NAME") continue;
             //std::cout << row[0] << "\n";
             std::string name = row[0];
-            WeaponType type = WeaponType::None;
+            WeaponType type = WeaponTypeFromString(row[3]);
             SkinRarity rarity = Contraband;
             std::string collection = row[1];
             float price[10] = { 0 };

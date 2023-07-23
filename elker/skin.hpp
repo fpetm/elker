@@ -18,21 +18,21 @@ namespace elker {
 
 		Knife		= WeaponClass::Knives | 1,
 
-		CZ			= WeaponClass::Pistol | 1,
-		Deagle		= WeaponClass::Pistol | 2,
-		Dualies		= WeaponClass::Pistol | 3,
+		CZ75Auto	= WeaponClass::Pistol | 1,
+		DesertEagle	= WeaponClass::Pistol | 2,
+		DualBerettas= WeaponClass::Pistol | 3,
 		FiveSeVen	= WeaponClass::Pistol | 4,
-		Glock		= WeaponClass::Pistol | 5,
+		Glock18		= WeaponClass::Pistol | 5,
 		P2000		= WeaponClass::Pistol | 6,
 		P250		= WeaponClass::Pistol | 7,
-		R8			= WeaponClass::Pistol | 8,
+		R8Revolver	= WeaponClass::Pistol | 8,
 		Tec9		= WeaponClass::Pistol | 9,
 		USPS		= WeaponClass::Pistol | 10,
 
-		Mag7		= WeaponClass::Heavy | 1,
+		MAG7		= WeaponClass::Heavy | 1,
 		Nova		= WeaponClass::Heavy | 2,
 		SawedOff	= WeaponClass::Heavy | 3,
-		XM			= WeaponClass::Heavy | 4,
+		XM1014		= WeaponClass::Heavy | 4,
 		M249		= WeaponClass::Heavy | 5,
 		Negev		= WeaponClass::Heavy | 6,
 
@@ -44,17 +44,17 @@ namespace elker {
 		PPBizon		= WeaponClass::SMG | 6,
 		UMP45		= WeaponClass::SMG | 7,
 
-		AK			= WeaponClass::Rifle | 1,
+		AK47		= WeaponClass::Rifle | 1,
 		AUG			= WeaponClass::Rifle | 2,
 		FAMAS		= WeaponClass::Rifle | 3,
 		Galil		= WeaponClass::Rifle | 4,
 		M4A1S		= WeaponClass::Rifle | 5,
 		M4A4		= WeaponClass::Rifle | 6,
-		SG			= WeaponClass::Rifle | 7,
+		SG553		= WeaponClass::Rifle | 7,
 		AWP			= WeaponClass::Rifle | 8,
-		G3SG1		= WeaponClass::Rifle | 9,
-		SCAR20		= WeaponClass::Rifle | 10,
-		SSG08		= WeaponClass::Rifle | 11,
+		SSG08		= WeaponClass::Rifle | 9,
+		G3SG1		= WeaponClass::Rifle | 10,
+		SCAR20		= WeaponClass::Rifle | 11,
 	};
 
 	enum SkinRarity {
