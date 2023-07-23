@@ -42,7 +42,7 @@ namespace elker {
             //std::cout << row[0] << "\n";
             std::string name = row[0];
             WeaponType type = WeaponType::None;
-            SkinRarity rarity;
+            SkinRarity rarity = Contraband;
             std::string collection = row[1];
             float price[10] = { 0 };
 
@@ -70,7 +70,7 @@ namespace elker {
             else std::cout << row[0] << " : " << "unknown rarity " << row[2] << "\n";
 
             for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-                m_Collections[m_Collections.size() - 1].AddSkin(Skin(name, price[condition], rarity, condition, type, m_Skins.size()));
+                m_Collections[m_Collections.size() - 1].AddSkin(Skin(name, price[condition], rarity, condition, type, m_Skins.size(), m_Skins.size()/10));
                 m_Skins.push_back(m_Collections[m_Collections.size() - 1].LastSkin());
             }
         }

@@ -11,14 +11,14 @@ int main()
 
 	elker::TradeUp tradeup;
 
-	tradeup.mask.resize(340);
-	for (int i = 0; i < 340; i++) {
+	tradeup.mask.resize(34);
+	for (int i = 0; i < 34; i++) {
 		tradeup.mask(i) = 0;
 	}
 
 	for (const elker::Skin &skin : db->GetSkins()) {
 		if (skin.m_Name == "Banana Cannon" && skin.m_Condition == elker::FN) {
-			tradeup.mask(skin.m_ID) = 10;
+			tradeup.mask(skin.m_lID) = 10;
 		}
 	}
 

@@ -5,7 +5,7 @@ namespace elker {
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) {
 		unsigned int counts[SkinCondition::Max] = { 0 };
 
-		const unsigned int skinc = db->GetSkins().size();
+		const unsigned int skinc = db->GetSkins().size()/10;
 		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
 			m_Prices[condition].resize(skinc);
 			m_Factor[condition].resize(skinc);
@@ -22,7 +22,7 @@ namespace elker {
 		}
 
 		for (Skin &skin : db->GetSkins()) {
-			m_Prices[skin.m_Condition](skin.m_ID) = skin.m_Price;
+			m_Prices[skin.m_Condition](skin.m_lID) = skin.m_Price;
 
 			counts[skin.m_Condition]++;
 		}
@@ -44,10 +44,10 @@ namespace elker {
 
 					for (Skin &first : collection) {
 						if (first.m_Rarity == rarity && first.m_Condition == condition) {
-							factor(first.m_ID) = higherc;
+							factor(first.m_lID) = higherc;
 							for (Skin& second : collection) {
 								if (second.m_Rarity == higher && second.m_Condition == condition) {
-									transformer(second.m_ID, first.m_ID) = 1;
+									transformer(second.m_lID, first.m_lID) = 1;
 								}
 							}
 						}

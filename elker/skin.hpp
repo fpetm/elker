@@ -88,14 +88,16 @@ namespace elker {
 
 	class Skin {
 	public:
-		Skin(std::string name, float price, SkinRarity rarity, SkinCondition condition, WeaponType weapontype, unsigned int id) : m_Name(name), m_Price(price), m_Rarity(rarity), m_Condition(condition), m_WeaponType(weapontype), m_ID(id) {}
+		Skin(std::string name, float price, SkinRarity rarity, SkinCondition condition, WeaponType weapontype, unsigned int gid, unsigned int lid) : 
+			m_Name(name), m_Price(price), m_Rarity(rarity), m_Condition(condition), m_WeaponType(weapontype), m_gID(gid), m_lID(lid) {}
 	public:
 		std::string m_Name;
 		float m_Price;
 		SkinRarity m_Rarity;
 		SkinCondition m_Condition;
 		WeaponType m_WeaponType;
-		unsigned int m_ID;
+		unsigned int m_gID;
+		unsigned int m_lID;
 	};
 
 	class SkinCollection {
