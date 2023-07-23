@@ -152,6 +152,8 @@ namespace elker {
 	public:
 		std::vector<SkinCollection> m_Collections;
 		std::vector<Skin> m_Skins;
+
+		std::vector<size_t> m_SkinIDsByRarity[SkinRarity::Contraband+1];
 	};
 
 	WeaponType WeaponTypeFromString(std::string s);

@@ -8,7 +8,7 @@
 
 // computation amount
 #define L2
-//#define L3
+#define L3
 
 namespace elker {
 	static size_t g_TradeUpCount;
@@ -46,7 +46,7 @@ namespace elker {
 
 				m_Prices[level](skin.m_ID) = skin.m_PricesSell[condition];
 				m_MappedPrices[level](skin.m_ID) = skin.m_PricesBuy[mapped_condition];
-				m_MappedPricesWithFees[level](skin.m_ID) = skin.m_PricesBuy[mapped_condition] * 0.85f;
+				m_MappedPricesWithFees[level](skin.m_ID) = skin.m_PricesBuy[mapped_condition] * 0.85f - 0.01f;
 			}
 		}
 
@@ -87,15 +87,20 @@ namespace elker {
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.level]);
 
+		return (gross / cost) > 1.0f && cost < 20.0f;
+	}
+
+	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
+		const float factor = tradeup.mask.dot(m_Factor[tradeup.level]);
+		const Eigen::VectorXf probability = (m_Transformer[tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.level]);
+
+		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.level]);
+		const float cost = tradeup.mask.dot(m_Prices[tradeup.level]);
+
 		tradeup.probability = probability;
 		tradeup.cost = cost;
 		tradeup.grossreturn = gross;
 
-		tradeup.computed = true;
-		return (gross / cost) > 1.0f && cost < 15.0f;
-	}
-
-	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
 		const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.level].array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.level].array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		tradeup.variance = tradeup.probability.dot(m2);
 		tradeup.stddev = std::sqrt(tradeup.variance);
@@ -113,7 +118,7 @@ namespace elker {
 	}
 
 	std::string Calculator::ExportTradeUp(TradeUp& tradeup) {
-		if (!ValidateTradeUp(tradeup)) return "";
+		//if (!ValidateTradeUp(tradeup)) return "";
 		ComputeStatistical(tradeup);
 		std::stringstream ss;
 		const std::vector<Skin> skins = m_DB->GetSkins();
@@ -171,7 +176,7 @@ namespace elker {
 			std::lock_guard<std::mutex> countguard(g_TradeUpCountMutex);
 			size_t current = g_TradeUpCount;
 
-			EK_INFO("  Searched total of {:15d} tradeups ({:6d} last second)", current, current - lastCount);
+			EK_INFO("  Searched total of {:15d} tradeups ({:8d} last second)", current, current - lastCount);
 			lastCount = current;
 
 			std::lock_guard<std::mutex> finishedguard(g_FinishedMutex);
@@ -183,66 +188,72 @@ namespace elker {
 		size_t nSkins = calculator.m_DB->m_Skins.size();
 		const SkinCondition condition = ConditionFromFloat(g_Levels[level / 2], level & 1);
 
+		std::vector<size_t> ids_by_rarity[SkinRarity::Contraband + 1];
+
+		for (SkinRarity rarity : {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec, SkinRarity::Restricted, SkinRarity::Classified}) {
+			for (size_t id : calculator.m_DB->m_SkinIDsByRarity[rarity]) {
+				if (calculator.m_DB->m_Skins[id].m_Banned[condition] == false) ids_by_rarity[rarity].push_back(id);
+			}
+		}
+
+
 		TradeUp tradeup(nSkins, level);
-		for (size_t id1 = 0; id1 < nSkins; id1++) {
-			size_t l_TradeUpCount = 0;
-			const Skin s1 = calculator.m_DB->m_Skins[id1];
-			if (s1.m_Banned[condition]) continue;
-			const SkinRarity rarity = s1.m_Rarity;
+		for (SkinRarity rarity : {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec, SkinRarity::Restricted, SkinRarity::Classified}) {
+			for (size_t id1 : ids_by_rarity[rarity]) {
+				size_t l_TradeUpCount = 0;
 
-			tradeup.Clear();
-			tradeup.mask(id1) = 10;
-			l_TradeUpCount++;
-			//tradeup.var = 1;
+				tradeup.Clear();
+				tradeup.mask(id1) = 10;
 
-			if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+				l_TradeUpCount++;
+				if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 
 #ifdef L2
-			for (size_t id2 = id1 + 1; id2 < nSkins; id2++) {
-				const Skin s2 = calculator.m_DB->m_Skins[id2];
+				for (size_t id2 : ids_by_rarity[rarity]) {
+					if (id2 == id1) continue;
+					for (float v1 = 1.0f; v1 <= 9.0f; v1 += 1.0f) {
+						tradeup.Clear();
+						const float A = v1;
+						const float B = 10.0f - v1;
 
-				if (s2.m_Banned[condition]) continue;
-				if (s1.m_Rarity != s2.m_Rarity) continue;
+						tradeup.mask(id1) = A;
+						tradeup.mask(id2) = B;
 
-				for (float v1 = 1.0f; v1 <= 9.0f; v1 += 1.0f) {
-					const float A = v1;
-					const float B = 10.0f - v1;
-					tradeup.Clear();
-					tradeup.mask(id1) = A;
-					tradeup.mask(id2) = B;
+						l_TradeUpCount++;
+						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 
-					l_TradeUpCount++;
-					if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-
-				}
+					}
 
 #ifdef L3
-				for (size_t id3 = id2 + 2; id3 < nSkins; id3++) {
-					const Skin s3 = calculator.m_DB->m_Skins[id3];
-					if (s3.m_Banned[condition]) continue;
-					if (s3.m_Rarity != rarity) continue;
-					for (float v1 = 1.0f; v1 <= 10.0f; v1 += 1.0f) {
-						for (float v2 = 1.0f; v2 <= 10.0f; v2 += 1.0f) {
-							const float A = v1;
-							const float B = v2;
-							const float C = 10.0f - v1 - v2;
-							if (C <= 0) continue;
+					for (size_t id3 : ids_by_rarity[rarity]) {
+						if (id3 == id2 || id3 == id1) continue;
+						for (float v1 = 1.0f; v1 <= 10.0f; v1 += 1.0f) {
+							for (float v2 = 1.0f; v2 <= 10.0f; v2 += 1.0f) {
+								if (v1 + v2 >= 10) continue;
+								const float A = v1;
+								const float B = v2;
+								const float C = 10.0f - v1 - v2;
 
-							tradeup.Clear();
-							tradeup.mask(id1) = A;
-							tradeup.mask(id2) = B;
-							tradeup.mask(id3) = C;
+								tradeup.Clear();
+								tradeup.mask(id1) = A;
+								tradeup.mask(id2) = B;
+								tradeup.mask(id3) = C;
 
-							if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+								if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+							}
 						}
+
+						std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
+						g_TradeUpCount += l_TradeUpCount;
 					}
+#else
+
+					std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
+					g_TradeUpCount += l_TradeUpCount;
+#endif
 				}
 #endif
-
-			std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
-			g_TradeUpCount += l_TradeUpCount;
 			}
-#endif
 		}
 	}
 
@@ -286,7 +297,7 @@ namespace elker {
 		const size_t tupt = tupc;
 
 
-		EK_INFO("Succesful bruteforcing, found {} profitable tradeups in {} seconds ({} tradeups/second)!", g_TradeUpCount, time, g_TradeUpCount / time);
+		EK_INFO("Succesful bruteforcing, found {} profitable tradeups in {} seconds ({:.2f} tradeups/second)!", tupt, time, g_TradeUpCount / time);
 		EK_INFO("Exporting...");
 		for (int level = 0; level < g_nLevels * 2; level++) {
 			for (TradeUp tradeup : tradeups[level]) {

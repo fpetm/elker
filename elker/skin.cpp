@@ -168,7 +168,7 @@ namespace elker {
             if (row[0] == "NAME") continue;
             std::string collection = row[1];
 
-            if (collection == "The eSports 2013 Collection") continue;
+            if (collection == "The eSports 2013 Collection" || collection == "The Revolution Collection") continue;
             if (m_Collections.size() == 0) {
                 m_Collections.push_back(SkinCollection(collection, 0));
             }
@@ -187,7 +187,7 @@ namespace elker {
             float wear_min = std::stof(row[4]);
             float wear_max = std::stof(row[5]);
 
-            if (collection == "eSports 2013 Collection") continue;
+            if (collection == "eSports 2013 Collection" || collection == "The Revolution Collection") continue;
 
             for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
                 if (row[6 + (int)condition] == "") {
@@ -239,6 +239,10 @@ namespace elker {
                     }
                 }
             }
+        }
+
+        for (const Skin& skin : m_Skins) {
+            m_SkinIDsByRarity[skin.m_Rarity].push_back(skin.m_ID);
         }
 
         EK_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(), m_Collections.size());
