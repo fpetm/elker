@@ -1,7 +1,9 @@
 #pragma once
 #include "skin.hpp"
 #include <iostream>
+#pragma warning(push, 0)
 #include <Eigen/Dense>
+#pragma warning(pop)
 
 namespace elker {
 	class TradeUp;

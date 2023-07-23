@@ -4,6 +4,7 @@
 #include <functional>
 #include <fstream>
 #include "util.hpp"
+#include "log.hpp"
 
 namespace elker {
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
@@ -124,7 +125,7 @@ namespace elker {
 		return ss.str();
 	}
 
-#define L2
+//#define L2
 //#define L3
 
 	void BruteforceCondition(const Calculator &calculator, SkinCondition condition, std::vector<TradeUp> &tradeups) {
@@ -198,6 +199,7 @@ namespace elker {
 	}
 
 	void Calculator::Bruteforce() {
+		EK_INFO("Bruteforcing...");
 		std::ofstream of("b:/out.csv");
 		of << "Cost,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Condition,";
 		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
@@ -211,6 +213,12 @@ namespace elker {
 		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
 			threads[condition].join();
 		}
+
+		size_t tupc = 0;
+		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) tupc += tradeups[condition].size();
+
+		EK_INFO("Succesful bruteforcing, found {} profitable tradeups!", tupc);
+
 		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
 			for (TradeUp tradeup : tradeups[condition]) {
 				of << ExportTradeUp(tradeup);

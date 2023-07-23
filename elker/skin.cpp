@@ -1,4 +1,6 @@
 #include "skin.hpp"
+#include "log.hpp"
+
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -11,7 +13,7 @@ namespace elker {
         // Open the file
         std::ifstream file(filename);
         if (!file.is_open()) {
-            std::cerr << "Failed to open the file: " << filename << std::endl;
+            EK_ERROR("Failed to open CSV ({})", filename);
             return data;
         }
 
@@ -27,6 +29,7 @@ namespace elker {
 
             data.push_back(row);
         }
+        EK_INFO("Succesfully parsed CSV ({})!", filename);
 
         // Close the file
         file.close();
@@ -140,7 +143,6 @@ namespace elker {
 
         for (auto& row : data) {
             if (row[0] == "NAME") continue;
-            //std::cout << row[0] << "\n";
             std::string name = row[0];
             WeaponType type = WeaponTypeFromString(row[3]);
             SkinRarity rarity = Contraband;
@@ -193,6 +195,8 @@ namespace elker {
             }
             collection.m_HighestRarity = highest;
         }
+
+        EK_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(), m_Collections.size());
 
     }
 
