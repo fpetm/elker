@@ -1,28 +1,54 @@
 #pragma once
 #include "skin.hpp"
+#include <iostream>
 #include <Eigen/Dense>
 
 namespace elker {
-	class TradeUp {
-	public:
-		Eigen::VectorXf mask;
-		SkinCondition condition;
-	};
+	class TradeUp;
 
 	class Calculator {
 	public:
+		Calculator() {}
 		Calculator(std::shared_ptr<SkinDB> db);
+		std::shared_ptr<SkinDB> getDB() const { return m_DB; }
 
-		float ExpectedValue(TradeUp& tradeup);
-		float Profit(TradeUp& tradeup);
+		std::string ExportTradeUp(TradeUp& tradeup);
 
 		void Bruteforce();
-	private:
+
+		bool Compute(TradeUp &tradeup) const;
+
 		std::shared_ptr<SkinDB> m_DB;
 
+	private:
 		Eigen::VectorXf m_Prices[SkinCondition::Max];
 		Eigen::VectorXf m_PricesWithFees[SkinCondition::Max];
 		Eigen::VectorXf m_Factor[SkinCondition::Max];
 		Eigen::MatrixXf m_Transformer[SkinCondition::Max];
+	};
+
+	class TradeUp {
+	public:
+		TradeUp(size_t n, SkinCondition cond) : nSkins(n), condition(cond), computed(false) {
+			mask.resize(nSkins);
+			Clear();
+		}
+
+		void Clear() {
+			computed = false;
+			cost = grossreturn = netreturn = 0;
+			for (int i = 0; i < nSkins; i++) {
+				mask(i) = 0;
+			}
+		}
+	public:
+		float cost, grossreturn, netreturn;
+		Eigen::VectorXf probability;
+
+		bool computed;
+
+		size_t nSkins;
+		Eigen::VectorXf mask;
+		SkinCondition condition;
 	};
 }

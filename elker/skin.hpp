@@ -89,20 +89,21 @@ namespace elker {
 
 	class Skin {
 	public:
-		Skin(std::string name, std::array<float, SkinCondition::Max> prices, SkinRarity rarity, WeaponType weapontype, unsigned int id) :
-			m_Name(name), m_Prices(prices), m_Rarity(rarity), m_WeaponType(weapontype), m_ID(id) {}
+		Skin(std::string name, std::array<float, SkinCondition::Max> prices, SkinRarity rarity, WeaponType weapontype, size_t id, size_t cid) :
+			m_Name(name), m_Prices(prices), m_Rarity(rarity), m_WeaponType(weapontype), m_ID(id), m_CollectionID(cid) {}
 	public:
 		std::string m_Name;
 		std::array<float, SkinCondition::Max> m_Prices;
 		SkinRarity m_Rarity;
 		WeaponType m_WeaponType;
-		unsigned int m_ID;
+		size_t m_CollectionID;
+		size_t m_ID;
+		bool m_Banned[SkinCondition::Max];
 	};
 
 	class SkinCollection {
 	public:
-		SkinCollection() {}
-		SkinCollection(const std::string &name, unsigned int id) : m_Name(name), m_ID(id) {}
+		SkinCollection(const std::string &name, size_t id) : m_Name(name), m_ID(id), m_HighestRarity(SkinRarity::Covert) {}
 		void AddSkin(Skin s) {
 			m_Skins.push_back(s);
 		}
@@ -118,7 +119,8 @@ namespace elker {
 		}
 
 		std::string m_Name = "";
-		unsigned int m_ID;
+		size_t m_ID;
+		SkinRarity m_HighestRarity;
 
 		using container = std::vector<Skin>;
 		using iterator = typename container::iterator;
