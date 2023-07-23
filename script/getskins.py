@@ -61,7 +61,6 @@ def parse(tokens):
         return o, index
     return recurs()[0]
 
-
 def load(path):
     r = None
     
@@ -193,8 +192,12 @@ def main():
 
         item_sets.append({'name' : name, 'description' : description, 'set_description' : set_description, 'weapons' : weapons})
 
-    for client_loot_list in client_loot_lists_ig.items():
-        pass # TODO do this also
+    skin_rarities = {}
+    for c in client_loot_lists_ig.items():
+        for rarity in rarities:
+            if c[0].endswith(rarity['name']):
+                for weapon in c[1]:
+                    skin_rarities[weapon] = rarity
 
     skins = []
     for item_set in item_sets:
@@ -211,11 +214,14 @@ def main():
         writer = csv.writer(f, delimiter = ',', quotechar = '"', quoting = csv.QUOTE_MINIMAL)
         writer.writerow(['name', 'weapon_type', 'rarity', 'collection', 'wear_min', 'wear_max'])
         for skin in skins:
-            #name = skin['paint_kit']['name']
+            name = skin['paint_kit']['name']
             tag = skin['paint_kit']['description_tag']
             #description = skin['paint_kit']['description_string']
             weapon_type = items[skin['weapon']]['item_name']
-            rarity = rarity_d[skin['paint_kit']['rarity']]
+            weapon = skin['weapon']
+
+            if not f'[{name}]{weapon}' in skin_rarities: continue
+            rarity = skin_rarities[f'[{name}]{weapon}']['description']
             collection = skin['collection']['description']
             wear_min = skin['paint_kit']['wear_min']
             wear_max = skin['paint_kit']['wear_max']
