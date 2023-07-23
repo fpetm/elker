@@ -1,0 +1,102 @@
+#pragma once
+
+namespace elker {
+	enum WeaponClass {
+		Knives			= 1 << 8,
+		Pistol			= 1 << 9,
+		Heavy			= 1 << 10,
+		SMG				= 1 << 11,
+		Rifle			= 1 << 12,
+	};
+
+	enum WeaponType {
+		None = 0,
+
+		Knife		= WeaponClass::Knives | 1,
+
+		CZ			= WeaponClass::Pistol | 1,
+		Deagle		= WeaponClass::Pistol | 2,
+		Dualies		= WeaponClass::Pistol | 3,
+		FiveSeVen	= WeaponClass::Pistol | 4,
+		Glock		= WeaponClass::Pistol | 5,
+		P2000		= WeaponClass::Pistol | 6,
+		P250		= WeaponClass::Pistol | 7,
+		R8			= WeaponClass::Pistol | 8,
+		Tec9		= WeaponClass::Pistol | 9,
+		USPS		= WeaponClass::Pistol | 10,
+
+		Mag7		= WeaponClass::Heavy | 1,
+		Nova		= WeaponClass::Heavy | 2,
+		SawedOff	= WeaponClass::Heavy | 3,
+		XM			= WeaponClass::Heavy | 4,
+		M249		= WeaponClass::Heavy | 5,
+		Negev		= WeaponClass::Heavy | 6,
+
+		MAC10		= WeaponClass::SMG | 1,
+		MP5SD		= WeaponClass::SMG | 2,
+		MP7			= WeaponClass::SMG | 3,
+		MP9			= WeaponClass::SMG | 4,
+		P90			= WeaponClass::SMG | 5,
+		PPBizon		= WeaponClass::SMG | 6,
+		UMP45		= WeaponClass::SMG | 7,
+
+		AK			= WeaponClass::Rifle | 1,
+		AUG			= WeaponClass::Rifle | 2,
+		FAMAS		= WeaponClass::Rifle | 3,
+		Galil		= WeaponClass::Rifle | 4,
+		M4A1S		= WeaponClass::Rifle | 5,
+		M4A4		= WeaponClass::Rifle | 6,
+		SG			= WeaponClass::Rifle | 7,
+		AWP			= WeaponClass::Rifle | 8,
+		G3SG1		= WeaponClass::Rifle | 9,
+		SCAR20		= WeaponClass::Rifle | 10,
+		SSG08		= WeaponClass::Rifle | 11,
+	};
+
+	enum SkinRarity {
+		Consumer,		// Gray
+		Industrial,		// Blue
+		MilSpec,		// Dark Blue
+		Restricted,		// Purple
+		Classified,		// Pink
+		Covert,			// Red
+		
+		Contraband,		// Howl
+	};
+
+	enum SkinCondition {
+		BS = 0,
+		WW = 1,
+		FT = 2,
+		MW = 3,
+		FN = 4,
+
+		BS_ST = 5,
+		WW_ST = 6,
+		FT_ST = 7,
+		MW_ST = 8,
+		FN_ST = 9,
+
+		Max = 10,
+	};
+
+	struct SkinCollection;
+
+	struct Skin {
+		std::string name = "";
+		SkinCollection *collection;
+		float price;
+		SkinRarity rarity;
+		SkinCondition condition;
+		WeaponType weapontype;
+		unsigned int id;
+	};
+
+	struct SkinCollection {
+		std::string name = "";
+		unsigned int id;
+		int nSkins = 0;
+		Skin *skins[256];
+	};
+
+}
