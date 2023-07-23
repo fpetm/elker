@@ -34,7 +34,7 @@ namespace elker {
         return data;
     }
 
-    static WeaponType WeaponTypeFromString(std::string s) {
+    WeaponType WeaponTypeFromString(std::string s) {
         if (s == "CZ75-Auto") return WeaponType::CZ75Auto;
         if (s == "Desert Eagle") return WeaponType::DesertEagle;
         if (s == "Dual Berettas") return WeaponType::DualBerettas;
@@ -69,9 +69,62 @@ namespace elker {
         if (s == "SSG 08") return WeaponType::SSG08;
         if (s == "G3SG1") return WeaponType::G3SG1;
         if (s == "SCAR-20") return WeaponType::SCAR20;
-
-        std::cout << s << "\n";
         return WeaponType::None;
+    }
+
+    std::string StringFromWeaponType(WeaponType type) {
+        switch (type) {
+        case WeaponType::CZ75Auto: return "CZ75-Auto";
+        case WeaponType::DesertEagle: return "Desert Eagle";
+        case WeaponType::FiveSeVen: return "Five-SeveN";
+        case WeaponType::Glock18: return "Glock-18";
+        case WeaponType::P2000: return "P2000";
+        case WeaponType::P250: return "P250";
+        case WeaponType::R8Revolver: return "R8 Revolver";
+        case WeaponType::Tec9: return "Tec-9";
+        case WeaponType::USPS: return "USP-S";
+        case WeaponType::MAG7: return "MAG-7";
+        case WeaponType::Nova: return "Nova";
+        case WeaponType::SawedOff: return "Sawed-Off";
+        case WeaponType::XM1014: return "XM1014";
+        case WeaponType::M249: return "M249";
+        case WeaponType::Negev: return "Negev";
+        case WeaponType::MAC10: return "MAC-10";
+        case WeaponType::MP5SD: return "MP5-SD";
+        case WeaponType::MP7: return "MP7";
+        case WeaponType::MP9: return "MP9";
+        case WeaponType::P90: return "P90";
+        case WeaponType::PPBizon: return "PP-Bizon";
+        case WeaponType::UMP45: return "UMP-45";
+        case WeaponType::AK47: return "AK-47";
+        case WeaponType::AUG: return "AUG";
+        case WeaponType::FAMAS: return "FAMAS";
+        case WeaponType::M4A1S: return "M4A1-S";
+        case WeaponType::M4A4: return "M4A4";
+        case WeaponType::SG553: return "SG 553";
+        case WeaponType::AWP: return "AWP";
+        case WeaponType::SSG08: return "SSG 08";
+        case WeaponType::G3SG1: return "G3SG1";
+        case WeaponType::SCAR20: return "SCAR-20";
+        case WeaponType::None: return "None";
+        case WeaponType::Knife: return "Knife";
+        default: return "ERROR";
+        }
+    }
+
+    std::string StringFromWeaponCondition(SkinCondition condition) {
+        switch (condition) {
+        case SkinCondition::BS: return "Battle-Scarred";
+        case SkinCondition::WW: return "Well-Worn";
+        case SkinCondition::FT: return "Field-Tested";
+        case SkinCondition::MW: return "Minimal Wear";
+        case SkinCondition::FN: return "Factory New";
+        case SkinCondition::BS_ST: return "StatTrak Battle-scarred";
+        case SkinCondition::WW_ST: return "StatTrak Well-worn";
+        case SkinCondition::FT_ST: return "StatTrak Field-tested";
+        case SkinCondition::MW_ST: return "StatTrak Minimal Wear";
+        case SkinCondition::FN_ST: return "StatTrak Factory New";
+        }
     }
 
     SkinDB::SkinDB(std::string skinpath) {

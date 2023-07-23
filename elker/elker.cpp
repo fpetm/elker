@@ -24,7 +24,9 @@ int main()
 
 	tradeup.condition = elker::FN;
 
-	std::cout << calc.ExpectedValue(tradeup) << "\n";
+	std::cout << calc.ExpectedValue(tradeup) << "\n" << "\n";
+
+	calc.Bruteforce();
 
 	return 0;
 }

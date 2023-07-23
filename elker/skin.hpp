@@ -151,4 +151,8 @@ namespace elker {
 		std::vector<Skin> m_Skins;
 	};
 
+	WeaponType WeaponTypeFromString(std::string s);
+	std::string StringFromWeaponType(WeaponType type);
+	std::string StringFromWeaponCondition(SkinCondition condition);
+
 }
