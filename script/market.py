@@ -23,11 +23,13 @@ for s in j['data']:
 #print(prices.keys())
 
 def get_csgo_item(name, currency = 'EUR'):
-    if name in prices:
-        return prices[name]
+#    if 'Hydra' in name:
+#        if name in prices: print(prices[name])
+#    if name in prices:
+#        return prices[name]
 
-    print(name + ' not in prices')
-    time.sleep(0.25)
+#    print(name + ' not in prices')
+    time.sleep(0.5)
     url = 'https://api.steamapis.com/market/item/' + str(appid) + '/' + name + '?api_key=' + key
     market_item = requests.get(url)
 
@@ -35,5 +37,5 @@ def get_csgo_item(name, currency = 'EUR'):
 
     #print(json.dumps(market_item.json(), indent = 2))
 
-    return market_item.json()['median_avg_prices_15days'][0][2]
+    return market_item.json()['median_avg_prices_15days'][0][1]
 
