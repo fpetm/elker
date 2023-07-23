@@ -9,32 +9,40 @@
 namespace elker {
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
 		const size_t skinc = db->GetSkins().size();
-		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-			m_Prices[condition].resize(skinc);
-			m_PricesWithFees[condition].resize(skinc);
-			m_Factor[condition].resize(skinc);
-			m_Transformer[condition].resize(skinc, skinc);
+		for (int level = 0; level < g_nLevels * 2; level++) {
+			m_Prices[level].resize(skinc);
+			m_MappedPrices[level].resize(skinc);
+			m_MappedPricesWithFees[level].resize(skinc);
+			m_Factor[level].resize(skinc);
+			m_Transformer[level].resize(skinc, skinc);
 
 			for (unsigned int i = 0; i < skinc; i++) {
-				m_Prices[condition](i) = 0;
-				m_Factor[condition](i) = 0;
+				m_Prices[level](i) = 0;
+				m_MappedPrices[level](i) = 0;
+				m_Prices[level](i) = 0;
+				m_MappedPricesWithFees[level](i) = 0;
 
 				for (unsigned int j = 0; j < skinc; j++) {
-					m_Transformer[condition](i, j) = 0;
+					m_Transformer[level](i, j) = 0;
 				}
 			}
 		}
 
 		for (Skin &skin : db->GetSkins()) {
-			for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-				m_Prices[condition](skin.m_ID) = skin.m_Prices[condition];
-				m_PricesWithFees[condition](skin.m_ID) = skin.m_Prices[condition] * 0.85f;
+			for (int level = 0; level < g_nLevels * 2; level++) {
+				float mapped = (skin.wear_max-skin.wear_min)*g_Levels[level / 2] + skin.wear_min;
+				SkinCondition condition = ConditionFromFloat(g_Levels[level/2], level & 1);
+				SkinCondition mapped_condition = ConditionFromFloat(mapped, level & 1);
+
+				m_Prices[level](skin.m_ID) = skin.m_Prices[condition];
+				m_MappedPrices[level](skin.m_ID) = skin.m_Prices[mapped_condition];
+				m_MappedPricesWithFees[level](skin.m_ID) = skin.m_Prices[mapped_condition] * 0.85f;
 			}
 		}
 
-		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-			auto& factor = m_Factor[condition];
-			auto& transformer = m_Transformer[condition];
+		for (int level = 0; level < g_nLevels * 2; level++) {
+			auto& factor = m_Factor[level];
+			auto& transformer = m_Transformer[level];
 			for (SkinCollection &collection : db->GetCollections()) {
 				for (SkinRarity rarity : {Consumer, Industrial, MilSpec, Restricted, Classified}) {
 					SkinRarity higher = (SkinRarity)(rarity + 1);
@@ -61,14 +69,13 @@ namespace elker {
 		}
 	}
 
-
 	bool Calculator::Compute(TradeUp& tradeup) const {
-		const float factor = tradeup.mask.dot(m_Factor[tradeup.condition]);
-		const Eigen::VectorXf probability = (m_Transformer[tradeup.condition] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.condition]);
+		const float factor = tradeup.mask.dot(m_Factor[tradeup.level]);
+		const Eigen::VectorXf probability = (m_Transformer[tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.level]);
 
-		const float gross = probability.dot(m_PricesWithFees[tradeup.condition]);
-		const float net = probability.dot(m_PricesWithFees[tradeup.condition]);
-		const float cost = tradeup.mask.dot(m_Prices[tradeup.condition]);
+		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.level]);
+		const float net = probability.dot(m_MappedPricesWithFees[tradeup.level]);
+		const float cost = tradeup.mask.dot(m_Prices[tradeup.level]);
 
 		tradeup.probability = probability;
 		tradeup.cost = cost;
@@ -81,7 +88,7 @@ namespace elker {
 	}
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
-		const Eigen::VectorXf m2 = ((m_PricesWithFees[tradeup.condition].array() - tradeup.cost - tradeup.grossreturn) * (m_PricesWithFees[tradeup.condition].array() - tradeup.cost - tradeup.grossreturn)).matrix();
+		const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.level].array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.level].array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		tradeup.variance = tradeup.probability.dot(m2);
 		tradeup.stddev = std::sqrt(tradeup.variance);
 		tradeup.vmr = tradeup.variance / tradeup.grossreturn;
@@ -96,8 +103,9 @@ namespace elker {
 		
 		for (int i = 0; i < tradeup.nSkins; i++) {
 			if (tradeup.mask(i) > 0.0f) {
+				SkinCondition condition = ConditionFromFloat(g_Levels[tradeup.level / 2], tradeup.level & 1);
 				if (m_DB->GetSkins()[i].m_Rarity >= m_DB->GetCollections()[m_DB->GetSkins()[i].m_CollectionID].m_HighestRarity) return "";
-				if (m_DB->GetSkins()[i].m_Prices[tradeup.condition] < 0) return "";
+				if (m_DB->GetSkins()[i].m_Prices[condition] < 0) return "";
 				skins.push_back(m_DB->GetSkins().at(i));
 				amounts.push_back(static_cast<int>(tradeup.mask(i)));
 			}
@@ -112,7 +120,8 @@ namespace elker {
 		ss << tradeup.stddev << ",";
 		ss << tradeup.vmr << ",";
 
-		ss << StringFromWeaponCondition(tradeup.condition) << ",";
+		ss << g_Levels[tradeup.level / 2] << ",";
+		ss << std::to_string(tradeup.level & 1) << ",";
 
 
 		for (int i = 0; i < skins.size(); i++) {
@@ -121,15 +130,13 @@ namespace elker {
 			}
 			//std::cout << amounts[i] << "x " << StringFromWeaponType(skins[i].m_WeaponType) << " | " << skins[i].m_Name << " (" << StringFromWeaponCondition(tradeup.condition) << ") + ";
 		}
-		const Eigen::VectorXf probability = (m_Transformer[tradeup.condition] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.condition]);
 
 		std::vector<Skin> outskins;
 		std::vector<float> chances;
 		for (int i = 0; i < tradeup.nSkins; i++) {
-			if (probability(i) > 0.0f) {
-				ss << StringFromWeaponType(m_DB->GetSkins()[i].m_WeaponType) << " | " << m_DB->GetSkins()[i].m_Name << "," << std::to_string(m_DB->GetSkins()[i].m_Prices[tradeup.condition]) << "," << std::to_string(probability(i)) << ",";
-				outskins.push_back(m_DB->GetSkins().at(i));
-				chances.push_back(probability(i));
+			if (tradeup.probability(i) > 0.0f) {
+				SkinCondition condition = ConditionFromFloat(g_Levels[tradeup.level / 2], tradeup.level & 1);
+				ss << StringFromWeaponType(m_DB->GetSkins()[i].m_WeaponType) << " | " << m_DB->GetSkins()[i].m_Name << "," << std::to_string(m_DB->GetSkins()[i].m_Prices[condition]) << "," << std::to_string(tradeup.probability(i)) << ",";
 			}
 		}
 
@@ -140,13 +147,13 @@ namespace elker {
 //#define L2
 //#define L3
 
-	void BruteforceCondition(const Calculator &calculator, SkinCondition condition, std::vector<TradeUp> &tradeups) {
+	void BruteforceCondition(const Calculator &calculator, int level, std::vector<TradeUp> &tradeups) {
 		size_t nSkins = calculator.m_DB->m_Skins.size();
 
-		TradeUp tradeup(nSkins, condition);
+		TradeUp tradeup(nSkins, level);
 		for (size_t id1 = 0; id1 < nSkins; id1++) {		
 			const Skin s1 = calculator.m_DB->m_Skins[id1];
-			if (s1.m_Banned[condition]) continue;
+			if (s1.m_Banned[level]) continue;
 			const SkinRarity rarity = s1.m_Rarity;
 
 			tradeup.mask(id1) = 10;
@@ -158,7 +165,7 @@ namespace elker {
 			for (size_t id2 = id1+1; id2 < nSkins; id2++) {
 				const Skin s2 = calculator.m_DB->m_Skins[id2];
 
-				if (s2.m_Banned[condition]) continue;
+				if (s2.m_Banned[level]) continue;
 				if (s1.m_Rarity != s2.m_Rarity) continue;
 
 #if 0 // the new method
@@ -188,7 +195,7 @@ namespace elker {
 #ifdef L3
 				for (size_t id3 = id1 + 1; id3 < nSkins; id3++) {
 					const Skin s3 = calculator.m_DB->m_Skins[id3];
-					if (s3.m_Banned[condition]) continue;
+					if (s3.m_Banned[level]) continue;
 					if (s3.m_Rarity != rarity) continue;
 					for (float v1 = 1.0f; v1 <= 8.0f; v1 += 1.0f) {
 						for (float v2 = v1 + 1.0f; v2 <= 9.0f; v2 += 1.0f) {
@@ -213,26 +220,27 @@ namespace elker {
 	void Calculator::Bruteforce() {
 		EK_INFO("Bruteforcing...");
 		std::ofstream of("b:/out.csv");
-		of << "Cost,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Variance,Standard Deviation,VMR,Condition,";
+		of << "Cost,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
 		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
 		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i+1 << "," << "Chance" << i + 1 << ",";
 		of << "\n";
-		std::thread threads[SkinCondition::Max];
-		std::vector<TradeUp> tradeups[SkinCondition::Max];
-		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-			threads[condition] = std::thread(BruteforceCondition, std::cref(*this), condition, std::ref(tradeups[condition]));
+		std::thread threads[g_nLevels*2];
+		std::vector<TradeUp> tradeups[g_nLevels * 2];
+		for (int level = 0; level < g_nLevels * 2; level++) {
+			threads[level] = std::thread(BruteforceCondition, std::cref(*this), level, std::ref(tradeups[level]));
 		}
-		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-			threads[condition].join();
+		for (int level = 0; level < g_nLevels * 2; level++) {
+			threads[level].join();
 		}
 
 		size_t tupc = 0;
-		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) tupc += tradeups[condition].size();
+		for (int level = 0; level < g_nLevels * 2; level++)
+			tupc += tradeups[level].size();
 
 		EK_INFO("Succesful bruteforcing, found {} profitable tradeups!", tupc);
 
-		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-			for (TradeUp tradeup : tradeups[condition]) {
+		for (int level = 0; level < g_nLevels * 2; level++) {
+			for (TradeUp tradeup : tradeups[level]) {
 				of << ExportTradeUp(tradeup);
 			}
 		}

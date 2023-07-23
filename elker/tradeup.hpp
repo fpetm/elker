@@ -8,9 +8,10 @@
 namespace elker {
 	class TradeUp;
 
+	static constexpr int g_nLevels = 5;
+	static constexpr std::array<float, g_nLevels> g_Levels = { 0.06f, 0.14f, 0.37f, 0.44f, 0.725f};
 	class Calculator {
 	public:
-		Calculator() {}
 		Calculator(std::shared_ptr<SkinDB> db);
 		std::shared_ptr<SkinDB> getDB() const { return m_DB; }
 
@@ -24,15 +25,17 @@ namespace elker {
 		std::shared_ptr<SkinDB> m_DB;
 
 	private:
-		Eigen::VectorXf m_Prices[SkinCondition::Max];
-		Eigen::VectorXf m_PricesWithFees[SkinCondition::Max];
-		Eigen::VectorXf m_Factor[SkinCondition::Max];
-		Eigen::MatrixXf m_Transformer[SkinCondition::Max];
+		Eigen::VectorXf m_Prices[g_nLevels*2];
+		Eigen::VectorXf m_MappedPrices[g_nLevels * 2];
+		Eigen::VectorXf m_MappedPricesWithFees[g_nLevels * 2];
+
+		Eigen::VectorXf m_Factor[g_nLevels * 2];
+		Eigen::MatrixXf m_Transformer[g_nLevels * 2];
 	};
 
 	class TradeUp {
 	public:
-		TradeUp(size_t n, SkinCondition cond) : nSkins(n), condition(cond), computed(false) {
+		TradeUp(size_t n, int l) : nSkins(n), level(l), computed(false) {
 			mask.resize(nSkins);
 			cost = grossreturn = netreturn = variance = stddev = vmr = 0;
 
@@ -55,6 +58,6 @@ namespace elker {
 
 		size_t nSkins;
 		Eigen::VectorXf mask;
-		SkinCondition condition;
+		int level;
 	};
 }

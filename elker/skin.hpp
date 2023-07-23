@@ -89,8 +89,8 @@ namespace elker {
 
 	class Skin {
 	public:
-		Skin(std::string name, std::array<float, SkinCondition::Max> prices, SkinRarity rarity, WeaponType weapontype, size_t id, size_t cid) :
-			m_Name(name), m_Prices(prices), m_Rarity(rarity), m_WeaponType(weapontype), m_ID(id), m_CollectionID(cid) {}
+		Skin(std::string name, std::array<float, SkinCondition::Max> prices, SkinRarity rarity, WeaponType weapontype, float wmin, float wmax, size_t id, size_t cid) :
+			m_Name(name), m_Prices(prices), m_Rarity(rarity), m_WeaponType(weapontype), wear_min(wmin), wear_max(wmax), m_ID(id), m_CollectionID(cid) {}
 	public:
 		std::string m_Name;
 		std::array<float, SkinCondition::Max> m_Prices;
@@ -98,6 +98,7 @@ namespace elker {
 		WeaponType m_WeaponType;
 		size_t m_CollectionID;
 		size_t m_ID;
+		float wear_min, wear_max;
 		bool m_Banned[SkinCondition::Max];
 	};
 
@@ -136,7 +137,7 @@ namespace elker {
 
 	class SkinDB {
 	public:
-		SkinDB(std::string skinpath = "C:/prog/elker/script/skins.csv");
+		SkinDB(std::string skinpath = "C:/prog/elker/skins_small.csv");
 		void AddCollection(SkinCollection &collection) {
 			m_Collections.push_back(collection);
 			for (auto& skin : collection) {
@@ -155,5 +156,5 @@ namespace elker {
 	WeaponType WeaponTypeFromString(std::string s);
 	std::string StringFromWeaponType(WeaponType type);
 	std::string StringFromWeaponCondition(SkinCondition condition);
-
+	SkinCondition ConditionFromFloat(float f, bool st);
 }
