@@ -1,5 +1,7 @@
-import requests, time
-from requests_tor import RequestsTor
+import requests, time, json
+
+key = 'D6LwF248v8SFi5QLk2C7IiY8UlM'
+appid = '730'
 
 currencies = {
     'USD' : 1,
@@ -9,34 +11,29 @@ currencies = {
     'RUB' : 5,
 }
 
-s = requests.Session()
-#s = RequestsTor()
-retries = requests.adapters.Retry(total = 10, backoff_factor = 0.1, status_forcelist=[500, 502, 503, 504, 429])
-s.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
 
-rc = 0
+r = requests.get('https://api.steamapis.com/market/items/730?api_key='+key)
+j = r.json()
 
-def get_item(appid, name, currency = 'EUR'):
-    global rc
-    time.sleep(3)
-    url = 'http://steamcommunity.com/market/priceoverview'
-    market_item = s.get(url,params={
-        'appid': str(appid),
-        'market_hash_name': name,
-        'currency': currencies[currency]
-    })
+prices = {}
 
-    rc += 1
+for s in j['data']:
+    prices[s['market_hash_name']] = s['prices']['safe']
 
-#    print(rc)
-#    if rc % 10 == 0:
-#        s.new_id()
-#        print(s.get('https://api.ipify.org/').text)
-#        print('new id')
-#        s.test()
+#print(prices.keys())
 
-    print(market_item, market_item.text)
-    return market_item.json()
+def get_csgo_item(name, currency = 'EUR'):
+    if name in prices:
+        return prices[name]
 
-def get_csgo_item(item, currency = 'EUR'):
-    return get_item('730', item, currency)
+    print(name + ' not in prices')
+    time.sleep(0.25)
+    url = 'https://api.steamapis.com/market/item/' + str(appid) + '/' + name + '?api_key=' + key
+    market_item = requests.get(url)
+
+    if 'error' in market_item.json(): return -1
+
+    #print(json.dumps(market_item.json(), indent = 2))
+
+    return market_item.json()['median_avg_prices_15days'][0][2]
+
