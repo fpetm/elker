@@ -3,9 +3,7 @@
 
 namespace elker {
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
-		unsigned int counts[SkinCondition::Max] = { 0 };
-
-		const unsigned int skinc = db->GetSkins().size()/10;
+		const unsigned int skinc = db->GetSkins().size();
 		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
 			m_Prices[condition].resize(skinc);
 			m_PricesWithFees[condition].resize(skinc);
@@ -23,10 +21,10 @@ namespace elker {
 		}
 
 		for (Skin &skin : db->GetSkins()) {
-			m_Prices[skin.m_Condition](skin.m_lID) = skin.m_Price;
-			m_PricesWithFees[skin.m_Condition](skin.m_lID) = skin.m_Price * 0.85f;
-
-			counts[skin.m_Condition]++;
+			for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
+				m_Prices[condition](skin.m_ID) = skin.m_Prices[condition];
+				m_PricesWithFees[condition](skin.m_ID) = skin.m_Prices[condition] * 0.85f;
+			}
 		}
 
 		for (SkinCollection &collection : db->GetCollections()) {
@@ -41,15 +39,15 @@ namespace elker {
 					float higherc = 0;
 
 					for (Skin skin : collection)
-						if (skin.m_Rarity == higher && skin.m_Condition == condition)
+						if (skin.m_Rarity == higher)
 							higherc += 1.0f;
 
 					for (Skin &first : collection) {
-						if (first.m_Rarity == rarity && first.m_Condition == condition) {
-							factor(first.m_lID) = higherc;
+						if (first.m_Rarity == rarity) {
+							factor(first.m_ID) = higherc;
 							for (Skin& second : collection) {
-								if (second.m_Rarity == higher && second.m_Condition == condition) {
-									transformer(second.m_lID, first.m_lID) = 1;
+								if (second.m_Rarity == higher) {
+									transformer(second.m_ID, first.m_ID) = 1;
 								}
 							}
 						}
@@ -57,10 +55,13 @@ namespace elker {
 				}
 			}
 		}
+
+
 	}
 
 	float Calculator::ExpectedValue(TradeUp& tradeup) {
 		const Eigen::VectorXf probability = (m_Transformer[tradeup.condition] * tradeup.mask)/tradeup.mask.dot(m_Factor[tradeup.condition]);
+
 		const float returnprice = probability.dot(m_PricesWithFees[tradeup.condition]);
 		const float tradeupcost = tradeup.mask.dot(m_Prices[tradeup.condition]);
 		return returnprice / tradeupcost;
@@ -76,13 +77,13 @@ namespace elker {
 	void Calculator::Bruteforce() {
 		for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
 			for (Skin skin : m_DB->GetSkins()) {
-				if (skin.m_Rarity == Classified || skin.m_Condition != condition) continue;
+				if (skin.m_Rarity == Classified) continue;
 				TradeUp tradeup;
 				tradeup.mask.resize(34);
 				for (int i = 0; i < 34; i++) {
 					tradeup.mask(i) = 0;
 				}
-				tradeup.mask(skin.m_lID) = 10;
+				tradeup.mask(skin.m_ID) = 10;
 				tradeup.condition = condition;
 
 				float m = ExpectedValue(tradeup);

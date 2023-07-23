@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <array>
 #include <iterator>
 
 namespace elker {
@@ -88,16 +89,14 @@ namespace elker {
 
 	class Skin {
 	public:
-		Skin(std::string name, float price, SkinRarity rarity, SkinCondition condition, WeaponType weapontype, unsigned int gid, unsigned int lid) : 
-			m_Name(name), m_Price(price), m_Rarity(rarity), m_Condition(condition), m_WeaponType(weapontype), m_gID(gid), m_lID(lid) {}
+		Skin(std::string name, std::array<float, SkinCondition::Max> prices, SkinRarity rarity, WeaponType weapontype, unsigned int id) :
+			m_Name(name), m_Prices(prices), m_Rarity(rarity), m_WeaponType(weapontype), m_ID(id) {}
 	public:
 		std::string m_Name;
-		float m_Price;
+		std::array<float, SkinCondition::Max> m_Prices;
 		SkinRarity m_Rarity;
-		SkinCondition m_Condition;
 		WeaponType m_WeaponType;
-		unsigned int m_gID;
-		unsigned int m_lID;
+		unsigned int m_ID;
 	};
 
 	class SkinCollection {

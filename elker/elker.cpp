@@ -16,11 +16,9 @@ int main()
 		tradeup.mask(i) = 0;
 	}
 
-	for (const elker::Skin &skin : db->GetSkins()) {
-		if (skin.m_Name == "Banana Cannon" && skin.m_Condition == elker::FN) {
-			tradeup.mask(skin.m_lID) = 10;
-		}
-	}
+	for (const elker::Skin &skin : db->GetSkins())
+		if (skin.m_Name == "Banana Cannon")
+			tradeup.mask(skin.m_ID) = 10;
 
 	tradeup.condition = elker::FN;
 
