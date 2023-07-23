@@ -167,6 +167,8 @@ namespace elker {
         for (auto& row : data) {
             if (row[0] == "NAME") continue;
             std::string collection = row[1];
+
+            if (collection == "The eSports 2013 Collection") continue;
             if (m_Collections.size() == 0) {
                 m_Collections.push_back(SkinCollection(collection, 0));
             }
@@ -184,6 +186,8 @@ namespace elker {
             std::array<float, SkinCondition::Max> price_sell = { 0 }, price_buy = { 0 };
             float wear_min = std::stof(row[4]);
             float wear_max = std::stof(row[5]);
+
+            if (collection == "eSports 2013 Collection") continue;
 
             for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
                 if (row[6 + (int)condition] == "") {

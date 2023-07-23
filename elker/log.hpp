@@ -15,7 +15,6 @@ namespace elker {
 
 }
 
-
 #define EK_TRACE(...)		::elker::Log::GetLogger()->trace(__VA_ARGS__)
 #define EK_INFO(...)		::elker::Log::GetLogger()->info(__VA_ARGS__)
 #define EK_WARN(...)		::elker::Log::GetLogger()->warn(__VA_ARGS__)

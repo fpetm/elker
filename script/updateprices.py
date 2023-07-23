@@ -30,8 +30,8 @@ with open('skins.csv', 'w', encoding='utf8', newline='') as f:
         WEAR_MIN = skin['wear_min']
         WEAR_MAX = skin['wear_max']
 
-#        if not COLLECTION in ('The Horizon Collection', 'The Danger Zone Collection', 'The Prisma Collection', 'The CS20 Collection', 'The Shattered Web Collection', 'The Prisma 2 Collection', 'The Fracture Collection', 'The Broken Fang Collection', 'The Snakebite Collection', 'The Operation Riptide Collection', 'The Dreams & Nightmares Collection', 'The Recoil Collection', 'The Revolution Collection'):
-#            continue
+        #if not COLLECTION in ('The Horizon Collection', 'The Danger Zone Collection', 'The Prisma Collection', 'The CS20 Collection', 'The Shattered Web Collection', 'The Prisma 2 Collection', 'The Fracture Collection', 'The Broken Fang Collection', 'The Snakebite Collection', 'The Operation Riptide Collection', 'The Dreams & Nightmares Collection', 'The Recoil Collection', 'The Revolution Collection'):
+        #     continue
         print(skin)
         SPRICE = {}
         SPRICEST = {}

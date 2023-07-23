@@ -52,6 +52,7 @@ namespace elker {
 	public:
 		float cost, grossreturn, netreturn;
 		float variance, stddev, vmr, profitchance, ev;
+
 		Eigen::VectorXf probability;
 
 		bool computed;
