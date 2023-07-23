@@ -1,18 +1,10 @@
-#pragma once
 #include "skin.hpp"
-#include <utility>
 #include <vector>
-#include <string>
-#include <sstream>
 #include <fstream>
+#include <sstream>
+#include <iostream>
 
 namespace elker {
-    static Skin g_Skins[16384];
-	static unsigned int g_NSkins = 0;
-    static SkinCollection g_Collections[128];
-	static unsigned int g_NCollections = 0;
-	static bool g_SkinsInit = false;
-
     std::vector<std::vector<std::string>> parseCSV(const std::string& filename) {
         std::vector<std::vector<std::string>> data;
 
@@ -42,7 +34,7 @@ namespace elker {
         return data;
     }
 
-	void InitSkins(const char *skinpath = "C:/prog/elker/script/skins.csv") {
+    SkinDB::SkinDB(std::string skinpath) {
         auto data = parseCSV(skinpath);
 
         for (auto& row : data) {
@@ -52,7 +44,7 @@ namespace elker {
             WeaponType type = WeaponType::None;
             SkinRarity rarity;
             std::string collection = row[1];
-            float price[10];
+            float price[10] = { 0 };
 
             bool good = false;
             for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
@@ -60,13 +52,12 @@ namespace elker {
                 good |= price[condition] != -1;
             }
             if (!good) { continue; }
-            
-            if (g_NCollections == 0) {
-                g_Collections[0] = { collection , 0};
-                g_NCollections++;
-            } else if (g_Collections[g_NCollections - 1].name != collection) {
-                g_Collections[g_NCollections] = { collection , g_NCollections };
-                g_NCollections++;
+
+            if (m_Collections.size() == 0) {
+                m_Collections.push_back(SkinCollection(collection, 0));
+            }
+            else if (m_Collections[m_Collections.size()-1].m_Name != collection) {
+                m_Collections.push_back(SkinCollection(collection, m_Collections.size()));
             }
 
             if (row[2] == "Consumer Grade") rarity = SkinRarity::Consumer;
@@ -79,22 +70,9 @@ namespace elker {
             else std::cout << row[0] << " : " << "unknown rarity " << row[2] << "\n";
 
             for (SkinCondition condition : {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
-                g_Skins[g_NSkins] = { name.c_str(), &g_Collections[g_NCollections - 1], price[0 + condition], rarity, condition, type, g_NSkins};
-                g_Collections[g_NCollections - 1].skins[g_Collections[g_NCollections - 1].nSkins] = &g_Skins[g_NSkins];
-
-                g_NSkins++;
-                g_Collections[g_NCollections - 1].nSkins++;
+                m_Collections[m_Collections.size() - 1].AddSkin(Skin(name, price[condition], rarity, condition, type, m_Skins.size()));
+                m_Skins.push_back(m_Collections[m_Collections.size() - 1].LastSkin());
             }
         }
-
-		g_SkinsInit = true;
-	}
-
-	std::pair<SkinCollection*, unsigned int> GetCollections () {
-		return std::pair<SkinCollection*, unsigned int>(g_Collections, g_NCollections);
-	}
-
-	std::pair<Skin*, unsigned int> GetSkins() {
-		return std::pair<Skin*, unsigned int>(g_Skins, g_NSkins);
-	}
+    }
 }

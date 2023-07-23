@@ -1,4 +1,8 @@
 #pragma once
+#include <vector>
+#include <memory>
+#include <string>
+#include <iterator>
 
 namespace elker {
 	enum WeaponClass {
@@ -80,23 +84,69 @@ namespace elker {
 		Max = 10,
 	};
 
-	struct SkinCollection;
+	class SkinCollection;
 
-	struct Skin {
-		std::string name = "";
-		SkinCollection *collection;
-		float price;
-		SkinRarity rarity;
-		SkinCondition condition;
-		WeaponType weapontype;
-		unsigned int id;
+	class Skin {
+	public:
+		Skin(std::string name, float price, SkinRarity rarity, SkinCondition condition, WeaponType weapontype, unsigned int id) : m_Name(name), m_Price(price), m_Rarity(rarity), m_Condition(condition), m_WeaponType(weapontype), m_ID(id) {}
+	public:
+		std::string m_Name;
+		float m_Price;
+		SkinRarity m_Rarity;
+		SkinCondition m_Condition;
+		WeaponType m_WeaponType;
+		unsigned int m_ID;
 	};
 
-	struct SkinCollection {
-		std::string name = "";
-		unsigned int id;
-		int nSkins = 0;
-		Skin *skins[256];
+	class SkinCollection {
+	public:
+		SkinCollection() {}
+		SkinCollection(const std::string &name, unsigned int id) : m_Name(name), m_ID(id) {}
+		void AddSkin(Skin s) {
+			m_Skins.push_back(s);
+		}
+
+		Skin& LastSkin() {
+			return m_Skins[m_Skins.size() - 1];
+		}
+
+		size_t Amount() const { return m_Skins.size(); }
+
+		Skin &operator[](size_t n) {
+			return m_Skins[n];
+		}
+
+		std::string m_Name = "";
+		unsigned int m_ID;
+
+		using container = std::vector<Skin>;
+		using iterator = typename container::iterator;
+		using const_iterator = typename container::const_iterator;
+
+		iterator begin() { return m_Skins.begin(); }
+		iterator end() { return m_Skins.end(); }
+		const_iterator begin() const { return m_Skins.begin(); }
+		const_iterator end() const { return m_Skins.end(); }
+	private:
+		std::vector<Skin> m_Skins;
+	};
+
+	class SkinDB {
+	public:
+		SkinDB(std::string skinpath = "C:/prog/elker/script/skins.csv");
+		void AddCollection(SkinCollection &collection) {
+			m_Collections.push_back(collection);
+			for (auto& skin : collection) {
+				m_Skins.push_back(skin);
+			}
+		}
+
+		std::vector<Skin> GetSkins() { return m_Skins; }
+		std::vector<SkinCollection> GetCollections() { return m_Collections; }
+
+	public:
+		std::vector<SkinCollection> m_Collections;
+		std::vector<Skin> m_Skins;
 	};
 
 }
