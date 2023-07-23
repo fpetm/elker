@@ -19,6 +19,7 @@ namespace elker {
 		void Bruteforce();
 
 		bool Compute(TradeUp &tradeup) const;
+		void ComputeStatistical(TradeUp& tradeup) const;
 
 		std::shared_ptr<SkinDB> m_DB;
 
@@ -33,18 +34,21 @@ namespace elker {
 	public:
 		TradeUp(size_t n, SkinCondition cond) : nSkins(n), condition(cond), computed(false) {
 			mask.resize(nSkins);
+			cost = grossreturn = netreturn = variance = stddev = vmr = 0;
+
 			Clear();
 		}
 
 		void Clear() {
 			computed = false;
-			cost = grossreturn = netreturn = 0;
+			cost = grossreturn = netreturn = variance = stddev = vmr = 0;
 			for (int i = 0; i < nSkins; i++) {
 				mask(i) = 0;
 			}
 		}
 	public:
 		float cost, grossreturn, netreturn;
+		float variance, stddev, vmr;
 		Eigen::VectorXf probability;
 
 		bool computed;

@@ -1,4 +1,4 @@
-#include "tradeup.hpp"
+﻿#include "tradeup.hpp"
 #include <iostream>
 #include <thread>
 #include <functional>
@@ -80,8 +80,16 @@ namespace elker {
 		return gross > cost;
 	}
 
+	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
+		const Eigen::VectorXf m2 = ((m_PricesWithFees[tradeup.condition].array() - tradeup.cost - tradeup.grossreturn) * (m_PricesWithFees[tradeup.condition].array() - tradeup.cost - tradeup.grossreturn)).matrix();
+		tradeup.variance = tradeup.probability.dot(m2);
+		tradeup.stddev = std::sqrt(tradeup.variance);
+		tradeup.vmr = tradeup.variance / tradeup.grossreturn;
+	}
+
 	std::string Calculator::ExportTradeUp(TradeUp& tradeup) {
 		if (tradeup.computed == false) return "";
+		ComputeStatistical(tradeup);
 		std::stringstream ss;
 		std::vector<Skin> skins;
 		std::vector<int> amounts;
@@ -94,11 +102,15 @@ namespace elker {
 				amounts.push_back(static_cast<int>(tradeup.mask(i)));
 			}
 		}
+
 		ss << tradeup.cost << ",";
 		ss << tradeup.grossreturn - tradeup.cost << ",";
 		ss << (tradeup.grossreturn / tradeup.cost - 1.0f) * 100.0f << ",";
 		ss << tradeup.netreturn - tradeup.cost << ",";
 		ss << (tradeup.netreturn / tradeup.cost - 1.0f) * 100.0f << ",";
+		ss << tradeup.variance << ",";
+		ss << tradeup.stddev << ",";
+		ss << tradeup.vmr << ",";
 
 		ss << StringFromWeaponCondition(tradeup.condition) << ",";
 
@@ -201,7 +213,7 @@ namespace elker {
 	void Calculator::Bruteforce() {
 		EK_INFO("Bruteforcing...");
 		std::ofstream of("b:/out.csv");
-		of << "Cost,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Condition,";
+		of << "Cost,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Variance,Standard Deviation,VMR,Condition,";
 		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
 		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i+1 << "," << "Chance" << i + 1 << ",";
 		of << "\n";
