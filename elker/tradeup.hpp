@@ -55,6 +55,8 @@ namespace elker {
 		Eigen::SparseVector<float> probability;
 
 		bool computed;
+		float A, B;
+		int id1, id2;
 
 		size_t nSkins;
 		SkinRarity rarity;

@@ -5,10 +5,11 @@
 #include <fstream>
 #include "util.hpp"
 #include "log.hpp"
+#include "partitions.hpp"
 
 // computation amount
 #define L2
-#define L3
+//#define L3
 
 #define MT
 
@@ -81,14 +82,14 @@ namespace elker {
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
 
-		return (gross / cost) > 1.0f && cost < 20.0f;
+		return (gross / cost) > 1.2f && cost < 20.0f;
 	}
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
 		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 
-		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
+		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity + 1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
 
 		tradeup.probability = probability;
@@ -102,7 +103,7 @@ namespace elker {
 		tradeup.stddev = std::sqrt(tradeup.variance);
 		tradeup.vmr = tradeup.variance / tradeup.grossreturn;
 		tradeup.profitchance = (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost).array().cwiseSign().cwiseMax(0).matrix().dot(tradeup.probability);
-		#endif
+#endif
 	}
 
 	bool ValidateTradeUp(const TradeUp& tradeup) {
@@ -117,7 +118,7 @@ namespace elker {
 		std::stringstream ss;
 		const std::vector<Skin> skins = m_DB->GetSkins();
 		const std::vector<size_t> ids_by_rarity = m_DB->m_SkinIDsByRarity[tradeup.rarity];
-		const std::vector<size_t> hids_by_rarity = m_DB->m_SkinIDsByRarity[tradeup.rarity+1];
+		const std::vector<size_t> hids_by_rarity = m_DB->m_SkinIDsByRarity[tradeup.rarity + 1];
 
 		ss << tradeup.cost << ",";
 		ss << tradeup.ev << ",";
@@ -133,28 +134,28 @@ namespace elker {
 		ss << g_Levels[tradeup.level / 2] << ",";
 		ss << std::to_string(tradeup.level & 1) << ",";
 
-		size_t total = 0;
+		// TODO this is extremely slow
+		const Eigen::VectorXf mask = tradeup.mask.toDense();
+		const Eigen::VectorXf probabilities = tradeup.mask.toDense();
+
 		for (int i = 0; i < ids_by_rarity.size(); i++) {
-			if (tradeup.mask.coeff(i) > 0.0f) {
+			if (mask(i) > 0.0f) {
 				size_t id = ids_by_rarity[i];
-				const int amount = static_cast<int>(tradeup.mask.coeff(i));
+				const int amount = static_cast<int>(mask(i));
 				for (int j = 0; j < amount; j++) {
-					total++;
 					const SkinCondition condition = ConditionFromFloat(g_Levels[tradeup.level / 2], tradeup.level & 1);
 					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " ($" << skins[id].m_PricesBuy[condition] << "), ";
 				}
 			}
 		}
-		if (total != 10)
-			EK_INFO("what");
 
 		std::vector<Skin> outskins;
 		std::vector<float> chances;
 		for (int i = 0; i < hids_by_rarity.size(); i++) {
-			if (tradeup.probability.coeff(i) > 0.0f) {
+			if (probabilities(i) > 0.0f) {
 				size_t id = hids_by_rarity[i];
 				const SkinCondition condition = MapCondition(skins[id], g_Levels[tradeup.level / 2], tradeup.level & 1);
-				ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << StringFromWeaponCondition(condition) << ")," << std::to_string(skins[id].m_PricesSell[condition]) << "," << std::to_string(tradeup.probability.coeff(i)) << ",";
+				ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << StringFromWeaponCondition(condition) << ")," << std::to_string(skins[id].m_PricesSell[condition]) << "," << std::to_string(probabilities(i)) << ",";
 			}
 		}
 
@@ -211,10 +212,16 @@ namespace elker {
 				for (size_t id2 : ids_by_rarity[rarity]) {
 					if (id2 == id1) continue;
 					TradeUp tradeup(nRSkins, level, rarity);
-					for (float v1 = 1.0f; v1 <= 9.0f; v1 += 1.0f) {
-						tradeup.Clear();
-						const float A = v1;
-						const float B = 10.0f - v1;
+					for (const auto p : p2) {
+						const float A = p[0];
+						const float B = p[1];
+
+						if (A + B != 10.0f)
+							std::cout << A << " " << B << "\n";
+						tradeup.A = A;
+						tradeup.B = B;
+						tradeup.id1 = id1;
+						tradeup.id2 = id2;
 
 						tradeup.mask.insert(id1) = A;
 						tradeup.mask.insert(id2) = B;
@@ -223,12 +230,11 @@ namespace elker {
 						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 
 					}
-					tradeup.mask.insert(id1) = 0;
-					tradeup.mask.insert(id2) = 0;
 
 #ifdef L3
 					for (size_t id3 : ids_by_rarity[rarity]) {
 						if (id3 == id2 || id3 == id1) continue;
+						TradeUp tradeup(nRSkins, level, rarity);
 						for (float v1 = 1.0f; v1 <= 10.0f; v1 += 1.0f) {
 							for (float v2 = 1.0f; v2 <= 10.0f; v2 += 1.0f) {
 								if (v1 + v2 >= 10) continue;
