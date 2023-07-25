@@ -3,6 +3,7 @@
 #include <iostream>
 #pragma warning(push, 0)
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #pragma warning(pop)
 
 namespace elker {
@@ -25,12 +26,12 @@ namespace elker {
 		std::shared_ptr<SkinDB> m_DB;
 
 	private:
-		Eigen::VectorXf m_Prices[SkinRarity::Contraband][g_nLevels*2];
-		Eigen::VectorXf m_MappedPrices[SkinRarity::Contraband][g_nLevels * 2];
-		Eigen::VectorXf m_MappedPricesWithFees[SkinRarity::Contraband][g_nLevels * 2];
+		Eigen::SparseVector<float> m_Prices[SkinRarity::Contraband][g_nLevels*2];
+		Eigen::SparseVector<float> m_MappedPrices[SkinRarity::Contraband][g_nLevels * 2];
+		Eigen::SparseVector<float> m_MappedPricesWithFees[SkinRarity::Contraband][g_nLevels * 2];
 
-		Eigen::VectorXf m_Factor[SkinRarity::Contraband][g_nLevels * 2];
-		Eigen::MatrixXf m_Transformer[SkinRarity::Contraband][g_nLevels * 2];
+		Eigen::SparseVector<float> m_Factor[SkinRarity::Contraband][g_nLevels * 2];
+		Eigen::SparseMatrix<float> m_Transformer[SkinRarity::Contraband][g_nLevels * 2];
 	};
 
 	class TradeUp {
@@ -45,21 +46,19 @@ namespace elker {
 		void Clear() {
 			computed = false;
 			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
-			for (int i = 0; i < nSkins; i++) {
-				mask(i) = 0;
-			}
+			mask.setZero();
 		}
 	public:
 		float cost, grossreturn, netreturn;
 		float variance, stddev, vmr, profitchance, ev;
 
-		Eigen::VectorXf probability;
+		Eigen::SparseVector<float> probability;
 
 		bool computed;
 
 		size_t nSkins;
 		SkinRarity rarity;
-		Eigen::VectorXf mask;
+		Eigen::SparseVector<float> mask;
 		int level;
 	};
 }

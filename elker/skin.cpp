@@ -164,6 +164,7 @@ namespace elker {
     inline bool CollectionFilter(std::string collectionname) {
         if (collectionname == "The eSports 2013 Collection") return false;
         if (collectionname == "The Nuke Collection") return false;
+        if (collectionname == "The Bank Collection") return false;
         return true;
     }
 
@@ -207,7 +208,7 @@ namespace elker {
                     price_buy[condition] = -1;
                     continue;
                 }
-                price_buy[condition] = std::stof(row[6 + (int)condition]);
+                price_buy[condition] = std::stof(row[16 + (int)condition]);
             }
 
             if (row[2] == "Consumer Grade") rarity = SkinRarity::Consumer;

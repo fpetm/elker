@@ -8,7 +8,7 @@
 
 // computation amount
 #define L2
-//#define L3
+#define L3
 
 #define MT
 
@@ -27,6 +27,8 @@ namespace elker {
 			const auto hids = m_DB->m_SkinIDsByRarity[rarity + 1];
 			const size_t skinc = ids.size();
 			const size_t higherc = hids.size();
+			
+			
 
 			for (int level = 0; level < g_nLevels * 2; level++) {
 				m_Prices[rarity][level].resize(skinc);
@@ -34,45 +36,39 @@ namespace elker {
 				m_MappedPricesWithFees[rarity][level].resize(skinc);
 				m_Factor[rarity][level].resize(skinc);
 				m_Transformer[rarity][level].resize(higherc, skinc);
-
-				for (unsigned int i = 0; i < skinc; i++) {
-					m_Prices[rarity][level](i) = 0;
-					m_MappedPrices[rarity][level](i) = 0;
-					m_Prices[rarity][level](i) = 0;
-					m_MappedPricesWithFees[rarity][level](i) = 0;
-
-					for (unsigned int j = 0; j < higherc; j++) {
-						m_Transformer[rarity][level](j, i) = 0;
-					}
-				}
 			}
 
 			if (rarity == SkinRarity::Covert) continue;
-			for (const size_t id : ids) {
-				const Skin skin = m_DB->m_Skins[id];
-				for (int level = 0; level < g_nLevels * 2; level++) {
+			for (int level = 0; level < g_nLevels * 2; level++) {
+				for (const size_t id : ids) {
+					const Skin skin = m_DB->m_Skins[id];
 					SkinCondition condition = ConditionFromFloat(g_Levels[level / 2], level & 1);
 					SkinCondition mapped_condition = MapCondition(skin, g_Levels[level / 2], level & 1);
 
-					m_Prices[rarity][level](skin.m_rID) = skin.m_PricesSell[condition];
-					m_MappedPrices[rarity][level](skin.m_rID) = skin.m_PricesBuy[mapped_condition];
-					m_MappedPricesWithFees[rarity][level](skin.m_rID) = skin.m_PricesBuy[mapped_condition] * 0.85f - 0.01f;
+					m_Prices[rarity][level].insertBack(skin.m_rID) = skin.m_PricesBuy[condition];
+					m_MappedPrices[rarity][level].insertBack(skin.m_rID) = skin.m_PricesSell[mapped_condition];
+					m_MappedPricesWithFees[rarity][level].insertBack(skin.m_rID) = skin.m_PricesSell[mapped_condition] * 0.85f - 0.01f;
 				}
 			}
 
 			for (int level = 0; level < g_nLevels * 2; level++) {
+				std::vector<Eigen::Triplet<float>> transformer_triplets;
 				auto& factor = m_Factor[rarity][level];
 				auto& transformer = m_Transformer[rarity][level];
+
+
 				for (const SkinCollection& collection : db->m_Collections) {
 					float higherc = collection.m_SkinsByRarity[rarity + 1].size();
 
 					for (const Skin& first : collection.m_SkinsByRarity[rarity]) {
-						factor(first.m_rID) = higherc;
+						factor.insertBack(first.m_rID) = higherc;
 						for (const Skin& second : collection.m_SkinsByRarity[rarity + 1]) {
-							transformer(second.m_rID, first.m_rID) = 1;
+							transformer_triplets.push_back({ (int) second.m_rID,(int)first.m_rID , 1 });
 						}
 					}
 				}
+				transformer.setFromTriplets(transformer_triplets.begin(), transformer_triplets.end());
+				transformer.makeCompressed();
 			}
 		}
 		EK_INFO("Built calculator");
@@ -80,7 +76,7 @@ namespace elker {
 
 	bool Calculator::Compute(TradeUp& tradeup) const {
 		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
-		const Eigen::VectorXf probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
@@ -90,7 +86,7 @@ namespace elker {
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
 		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
-		const Eigen::VectorXf probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
@@ -99,13 +95,13 @@ namespace elker {
 		tradeup.cost = cost;
 		tradeup.grossreturn = gross;
 		tradeup.ev = tradeup.grossreturn - tradeup.cost;
+		tradeup.netreturn = tradeup.probability.dot(m_MappedPricesWithFees[tradeup.rarity][tradeup.level]);
 #if 0
 		const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		tradeup.variance = tradeup.probability.dot(m2);
 		tradeup.stddev = std::sqrt(tradeup.variance);
 		tradeup.vmr = tradeup.variance / tradeup.grossreturn;
 		tradeup.profitchance = (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost).array().cwiseSign().cwiseMax(0).matrix().dot(tradeup.probability);
-		tradeup.netreturn = tradeup.probability.dot(m_MappedPricesWithFees[tradeup.rarity][tradeup.level]);
 		#endif
 	}
 
@@ -117,7 +113,6 @@ namespace elker {
 	}
 
 	std::string Calculator::ExportTradeUp(TradeUp& tradeup) {
-		//if (!ValidateTradeUp(tradeup)) return "";
 		ComputeStatistical(tradeup);
 		std::stringstream ss;
 		const std::vector<Skin> skins = m_DB->GetSkins();
@@ -140,9 +135,9 @@ namespace elker {
 
 		size_t total = 0;
 		for (int i = 0; i < ids_by_rarity.size(); i++) {
-			if (tradeup.mask(i) > 0.0f) {
+			if (tradeup.mask.coeff(i) > 0.0f) {
 				size_t id = ids_by_rarity[i];
-				const int amount = static_cast<int>(tradeup.mask(i));
+				const int amount = static_cast<int>(tradeup.mask.coeff(i));
 				for (int j = 0; j < amount; j++) {
 					total++;
 					const SkinCondition condition = ConditionFromFloat(g_Levels[tradeup.level / 2], tradeup.level & 1);
@@ -156,10 +151,10 @@ namespace elker {
 		std::vector<Skin> outskins;
 		std::vector<float> chances;
 		for (int i = 0; i < hids_by_rarity.size(); i++) {
-			if (tradeup.probability(i) > 0.0f) {
+			if (tradeup.probability.coeff(i) > 0.0f) {
 				size_t id = hids_by_rarity[i];
 				const SkinCondition condition = MapCondition(skins[id], g_Levels[tradeup.level / 2], tradeup.level & 1);
-				ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << "," << std::to_string(skins[id].m_PricesSell[condition]) << "," << std::to_string(tradeup.probability(i)) << ",";
+				ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << StringFromWeaponCondition(condition) << ")," << std::to_string(skins[id].m_PricesSell[condition]) << "," << std::to_string(tradeup.probability.coeff(i)) << ",";
 			}
 		}
 
@@ -202,31 +197,34 @@ namespace elker {
 		}
 
 		for (SkinRarity rarity : {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec, SkinRarity::Restricted, SkinRarity::Classified}) {
-			TradeUp tradeup(calculator.m_DB->m_SkinIDsByRarity[rarity].size(), level, rarity);
+			size_t nRSkins = calculator.m_DB->m_SkinIDsByRarity[rarity].size();
 			for (size_t id1 : ids_by_rarity[rarity]) {
+				TradeUp tradeup(nRSkins, level, rarity);
 				size_t l_TradeUpCount = 0;
 
-				tradeup.Clear();
-				tradeup.mask(id1) = 10;
-
+				tradeup.mask.insert(id1) = 10;
 				l_TradeUpCount++;
 				if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+				tradeup.mask.insert(id1) = 0;
 
 #ifdef L2
 				for (size_t id2 : ids_by_rarity[rarity]) {
 					if (id2 == id1) continue;
+					TradeUp tradeup(nRSkins, level, rarity);
 					for (float v1 = 1.0f; v1 <= 9.0f; v1 += 1.0f) {
 						tradeup.Clear();
 						const float A = v1;
 						const float B = 10.0f - v1;
 
-						tradeup.mask(id1) = A;
-						tradeup.mask(id2) = B;
+						tradeup.mask.insert(id1) = A;
+						tradeup.mask.insert(id2) = B;
 
 						l_TradeUpCount++;
 						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 
 					}
+					tradeup.mask.insert(id1) = 0;
+					tradeup.mask.insert(id2) = 0;
 
 #ifdef L3
 					for (size_t id3 : ids_by_rarity[rarity]) {
@@ -238,14 +236,17 @@ namespace elker {
 								const float B = v2;
 								const float C = 10.0f - v1 - v2;
 
-								tradeup.Clear();
-								tradeup.mask(id1) = A;
-								tradeup.mask(id2) = B;
-								tradeup.mask(id3) = C;
+								tradeup.mask.insert(id1) = A;
+								tradeup.mask.insert(id2) = B;
+								tradeup.mask.insert(id3) = C;
 
 								if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+
 							}
 						}
+						tradeup.mask.insert(id1) = 0;
+						tradeup.mask.insert(id2) = 0;
+						tradeup.mask.insert(id3) = 0;
 
 						std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
 						g_TradeUpCount += l_TradeUpCount;
