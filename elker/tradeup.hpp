@@ -25,17 +25,17 @@ namespace elker {
 		std::shared_ptr<SkinDB> m_DB;
 
 	private:
-		Eigen::VectorXf m_Prices[g_nLevels*2];
-		Eigen::VectorXf m_MappedPrices[g_nLevels * 2];
-		Eigen::VectorXf m_MappedPricesWithFees[g_nLevels * 2];
+		Eigen::VectorXf m_Prices[SkinRarity::Contraband][g_nLevels*2];
+		Eigen::VectorXf m_MappedPrices[SkinRarity::Contraband][g_nLevels * 2];
+		Eigen::VectorXf m_MappedPricesWithFees[SkinRarity::Contraband][g_nLevels * 2];
 
-		Eigen::VectorXf m_Factor[g_nLevels * 2];
-		Eigen::MatrixXf m_Transformer[g_nLevels * 2];
+		Eigen::VectorXf m_Factor[SkinRarity::Contraband][g_nLevels * 2];
+		Eigen::MatrixXf m_Transformer[SkinRarity::Contraband][g_nLevels * 2];
 	};
 
 	class TradeUp {
 	public:
-		TradeUp(size_t n, int l) : nSkins(n), level(l), computed(false) {
+		TradeUp(size_t n, int l, SkinRarity r) : nSkins(n), level(l), computed(false), rarity(r) {
 			mask.resize(nSkins);
 			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
 
@@ -58,6 +58,7 @@ namespace elker {
 		bool computed;
 
 		size_t nSkins;
+		SkinRarity rarity;
 		Eigen::VectorXf mask;
 		int level;
 	};
