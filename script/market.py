@@ -11,15 +11,6 @@ currencies = {
     'RUB' : 5,
 }
 
-
-r = requests.get('https://api.steamapis.com/market/items/730?api_key='+key)
-j = r.json()
-
-prices = {}
-
-for s in j['data']:
-    prices[s['market_hash_name']] = s['prices']['safe']
-
 #print(prices.keys())
 
 def get_csgo_item(name, currency = 'EUR'):
