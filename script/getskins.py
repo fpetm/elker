@@ -202,13 +202,10 @@ def main():
     skins = []
     for item_set in item_sets:
         for paint_kit in paint_kits:
-            if paint_kit['name'] in [e['skin'] for e in item_set['weapons']]:
-                weapon = None
-                for w in item_set['weapons']: 
-                    if w['skin'] == paint_kit['name']:
-                        weapon = w['weapon']
-                collection = item_set
-                skins.append({'paint_kit' : paint_kit, 'weapon' : weapon, 'collection' : collection})
+            for w in item_set['weapons']:
+                if paint_kit['name'] == w['skin']:
+                    collection = item_set
+                    skins.append({'paint_kit' : paint_kit, 'weapon' : w['weapon'], 'collection' : collection})
 
     with open('skindata.csv', 'w', newline = '', encoding = 'utf8') as f:
         writer = csv.writer(f, delimiter = ',', quotechar = '"', quoting = csv.QUOTE_MINIMAL)

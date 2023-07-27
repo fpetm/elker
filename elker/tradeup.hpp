@@ -16,7 +16,7 @@ namespace elker {
 		Calculator(std::shared_ptr<SkinDB> db);
 		std::shared_ptr<SkinDB> getDB() const { return m_DB; }
 
-		std::string ExportTradeUp(TradeUp& tradeup);
+		std::string ExportTradeUp(TradeUp& tradeup) const;
 
 		void Bruteforce();
 
@@ -36,7 +36,7 @@ namespace elker {
 
 	class TradeUp {
 	public:
-		TradeUp(size_t n, int l, SkinRarity r) : nSkins(n), level(l), computed(false), rarity(r) {
+		TradeUp(size_t n, size_t l, SkinRarity r) : nSkins(n), level(l), computed(false), rarity(r) {
 			mask.resize(nSkins);
 			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
 
@@ -51,7 +51,7 @@ namespace elker {
 			mask.setZero();
 		}
 
-		std::string hash();
+		std::string hash() const;
 	public:
 		float cost, grossreturn, netreturn;
 		float variance, stddev, vmr, profitchance, ev;
@@ -59,12 +59,10 @@ namespace elker {
 		Eigen::SparseVector<float> probability;
 
 		bool computed;
-		float A, B;
-		int id1, id2;
 
 		size_t nSkins;
 		SkinRarity rarity;
 		Eigen::SparseVector<float> mask;
-		int level;
+		size_t level;
 	};
 }

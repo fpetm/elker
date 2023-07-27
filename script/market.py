@@ -42,6 +42,7 @@ def get_csgo_item(name, currency = 'EUR'):
                 print(f'Failed request finally: {market_item.text}')
 
     #print(json.dumps(market_item.json(), indent = 2))
+    
     if 'error' in j:
         if j['error'] == 'No matching item found with these parameters':
             return -1, -1
@@ -49,5 +50,5 @@ def get_csgo_item(name, currency = 'EUR'):
         return -1, -1
 
 
-    return (market_item.json()['histogram']['sell_order_summary']['price'], market_item.json()['histogram']['buy_order_summary']['price'])
+    return (market_item.json()['histogram']['lowest_sell_order'], market_item.json()['histogram']['highest_buy_order'])
 

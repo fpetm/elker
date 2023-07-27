@@ -158,8 +158,6 @@ namespace elker {
     }
 
     SkinCondition ConditionFromFloat(float f, bool st) {
-        if (f < 0 || f > 1) return SkinCondition::Max;
-
         if (st) {
             if (f >= 0.00f && f <= 0.07f) return SkinCondition::FN_ST;
             else if (f > 0.07f && f <= 0.15f) return SkinCondition::MW_ST;
@@ -173,6 +171,7 @@ namespace elker {
             else if (f > 0.38f && f <= 0.45f) return SkinCondition::WW;
             else if (f > 0.45f && f <= 1.00f) return SkinCondition::BS;
         }
+        return SkinCondition::Max;
     }
 
     SkinCondition MapCondition(const Skin& skin, float wear, bool stattrak) {
@@ -181,6 +180,7 @@ namespace elker {
     }
 
     inline bool CollectionFilter(std::string collectionname) {
+        (void)collectionname;
         return true;
     }
 

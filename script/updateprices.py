@@ -17,10 +17,10 @@ with open('skindata.csv', 'r', encoding='utf8') as f:
 with open('skins.csv', 'w', encoding='utf8', newline='') as f:
     writer = csv.writer(f, delimiter=',')
     writer.writerow(['NAME', 'COLLECTION', 'RARITY', 'WEAPON', 'WEAR_MIN', 'WEAR_MAX', 
-                     'PRICE_BS_SELL', 'PRICE_WW', 'PRICE_FT_SELL', 'PRICE_MW_SELL', 'PRICE_FN_SELL',
-                     'PRICE_BS_ST_SELL', 'PRICE_WW_ST_SELL', 'PRICE_FT_ST_SELL', 'PRICE_MW_ST_SELL', 'PRICE_BS_ST_SELL',
-                     'PRICE_BS_BUY', 'PRICE_WW_BUY', 'PRICE_FT_BUY', 'PRICE_MW_BUY', 'PRICE_FN_BUY',
-                     'PRICE_BS_ST_BUY', 'PRICE_WW_ST_BUY', 'PRICE_FT_ST_BUY', 'PRICE_MW_ST_BUY', 'PRICE_BS_ST_BUY',
+                     'PRICE_BS_SELL',       'PRICE_WW_SELL',    'PRICE_FT_SELL',    'PRICE_MW_SELL',    'PRICE_FN_SELL',
+                     'PRICE_BS_ST_SELL',    'PRICE_WW_ST_SELL', 'PRICE_FT_ST_SELL', 'PRICE_MW_ST_SELL', 'PRICE_FN_ST_SELL',
+                     'PRICE_BS_BUY',        'PRICE_WW_BUY',     'PRICE_FT_BUY',     'PRICE_MW_BUY',     'PRICE_FN_BUY',
+                     'PRICE_BS_ST_BUY',     'PRICE_WW_ST_BUY',  'PRICE_FT_ST_BUY',  'PRICE_MW_ST_BUY',  'PRICE_FN_ST_BUY',
                      ])
     for skin in data:
         COLLECTION = skin['collection']
@@ -44,6 +44,11 @@ with open('skins.csv', 'w', encoding='utf8', newline='') as f:
             #PRICEST[wear] = -1
             SPRICE[wear], BPRICE[wear] = market.get_csgo_item(WEAPON + ' | ' + NAME + ' (' + wear + ')')
             SPRICEST[wear], BPRICEST[wear] = market.get_csgo_item('StatTrak™ ' + WEAPON + ' | ' + NAME + ' (' + wear + ')')
+
+        print(SPRICE)
+        print(SPRICEST)
+        print(BPRICE)
+        print(BPRICEST)
 
         writer.writerow([NAME, COLLECTION, RARITY, WEAPON, WEAR_MIN, WEAR_MAX,
                          SPRICE  ['Battle-Scarred'], SPRICE  ['Well-Worn'], SPRICE  ['Field-Tested'], SPRICE  ['Minimal Wear'], SPRICE  ['Factory New'],

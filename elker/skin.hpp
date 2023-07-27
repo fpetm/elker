@@ -88,7 +88,9 @@ namespace elker {
 	class Skin {
 	public:
 		Skin(std::string name, std::array<float, SkinCondition::Max> prices_sell, std::array<float, SkinCondition::Max> prices_buy, SkinRarity rarity, WeaponType weapontype, float wmin, float wmax, size_t id, size_t cid, size_t rid) :
-			m_Name(name), m_PricesSell(prices_sell), m_PricesBuy(prices_buy), m_Rarity(rarity), m_WeaponType(weapontype), wear_min(wmin), wear_max(wmax), m_ID(id), m_CollectionID(cid), m_rID(rid) {}
+			m_Name(name), m_PricesSell(prices_sell), m_PricesBuy(prices_buy), m_Rarity(rarity), m_WeaponType(weapontype), wear_min(wmin), wear_max(wmax), m_ID(id), m_CollectionID(cid), m_rID(rid) {
+			m_Banned = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		}
 	public:
 		std::string m_Name;
 		std::array<float, SkinCondition::Max> m_PricesSell;
@@ -98,7 +100,7 @@ namespace elker {
 		size_t m_CollectionID;
 		size_t m_ID, m_rID;
 		float wear_min, wear_max;
-		bool m_Banned[SkinCondition::Max];
+		std::array<bool, SkinCondition::Max> m_Banned;
 	};
 
 	class SkinCollection {
