@@ -79,7 +79,6 @@ namespace elker {
 	}
 
 	bool Calculator::Compute(TradeUp& tradeup) const {
-		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
@@ -89,7 +88,6 @@ namespace elker {
 	}
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
-		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity + 1][tradeup.level]);
@@ -140,7 +138,7 @@ namespace elker {
 
 		// TODO this is extremely slow
 		const Eigen::VectorXf mask = tradeup.mask.toDense();
-		const Eigen::VectorXf probabilities = tradeup.mask.toDense();
+		const Eigen::VectorXf probabilities = tradeup.probability.toDense();
 
 		for (int i = 0; i < ids_by_rarity.size(); i++) {
 			if (mask(i) > 0.0f) {
@@ -153,8 +151,6 @@ namespace elker {
 			}
 		}
 
-		std::vector<Skin> outskins;
-		std::vector<float> chances;
 		for (int i = 0; i < hids_by_rarity.size(); i++) {
 			if (probabilities(i) > 0.0f) {
 				size_t id = hids_by_rarity[i];
