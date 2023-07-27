@@ -98,13 +98,13 @@ namespace elker {
 		tradeup.grossreturn = gross;
 		tradeup.ev = tradeup.grossreturn - tradeup.cost;
 		tradeup.netreturn = tradeup.probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
-#if 0
-		const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost - tradeup.grossreturn)).matrix();
+
+		const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		tradeup.variance = tradeup.probability.dot(m2);
 		tradeup.stddev = std::sqrt(tradeup.variance);
 		tradeup.vmr = tradeup.variance / tradeup.grossreturn;
-		tradeup.profitchance = (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost).array().cwiseSign().cwiseMax(0).matrix().dot(tradeup.probability);
-#endif
+		tradeup.profitchance = (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost).array().cwiseSign().cwiseMax(0).matrix().dot(tradeup.probability.toDense());
+
 	}
 
 	bool ValidateTradeUp(const TradeUp& tradeup) {

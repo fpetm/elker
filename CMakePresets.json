@@ -26,7 +26,8 @@
         "strategy": "external"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "elker_WARNINGS_AS_ERRORS": false
       }
     },
     {

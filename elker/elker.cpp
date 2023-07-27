@@ -3,6 +3,8 @@
 #include "tradeup.hpp"
 #include "log.hpp"
 
+#include <internal_use_only/config.hpp>
+
 int main() {
 	elker::Log::Init();
 
