@@ -138,6 +138,25 @@ namespace elker {
         }
     }
 
+    std::string ShortStringFromWeaponCondition(SkinCondition condition) {
+        switch (condition) {
+        case SkinCondition::BS: return "BS";
+        case SkinCondition::WW: return "WW";
+        case SkinCondition::FT: return "FT";
+        case SkinCondition::MW: return "MW";
+        case SkinCondition::FN: return "FN";
+        case SkinCondition::BS_ST: return "BS ST";
+        case SkinCondition::WW_ST: return "WW ST";
+        case SkinCondition::FT_ST: return "FT ST";
+        case SkinCondition::MW_ST: return "MW ST";
+        case SkinCondition::FN_ST: return "FN ST";
+        case SkinCondition::Max: return "MAX";
+        default: {
+            return "ERROR[" + std::to_string((int)condition) + "]";
+        };
+        }
+    }
+
     SkinCondition ConditionFromFloat(float f, bool st) {
         if (f < 0 || f > 1) return SkinCondition::Max;
 
@@ -162,9 +181,6 @@ namespace elker {
     }
 
     inline bool CollectionFilter(std::string collectionname) {
-        if (collectionname == "The eSports 2013 Collection") return false;
-        if (collectionname == "The Nuke Collection") return false;
-        if (collectionname == "The Bank Collection") return false;
         return true;
     }
 

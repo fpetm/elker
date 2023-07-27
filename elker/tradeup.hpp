@@ -43,11 +43,15 @@ namespace elker {
 			Clear();
 		}
 
+		TradeUp(std::string hash, size_t nSkins, size_t level);
+
 		void Clear() {
 			computed = false;
 			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
 			mask.setZero();
 		}
+
+		std::string hash();
 	public:
 		float cost, grossreturn, netreturn;
 		float variance, stddev, vmr, profitchance, ev;

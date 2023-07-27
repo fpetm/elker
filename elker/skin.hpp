@@ -158,6 +158,7 @@ namespace elker {
 	WeaponType WeaponTypeFromString(std::string s);
 	std::string StringFromWeaponType(WeaponType type);
 	std::string StringFromWeaponCondition(SkinCondition condition);
+	std::string ShortStringFromWeaponCondition(SkinCondition condition);
 	SkinCondition ConditionFromFloat(float f, bool st);
 	SkinCondition MapCondition(const Skin& skin, float wear, bool stattrak);
 }

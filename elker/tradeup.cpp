@@ -3,12 +3,15 @@
 #include <thread>
 #include <functional>
 #include <fstream>
+#include <bitset>
+
 #include "util.hpp"
 #include "log.hpp"
 #include "partitions.hpp"
+#include "base64.hpp"
 
 // computation amount
-#define L2
+//#define L2
 //#define L3
 
 #define MT
@@ -54,9 +57,9 @@ namespace elker {
 
 			for (int level = 0; level < g_nLevels * 2; level++) {
 				std::vector<Eigen::Triplet<float>> transformer_triplets;
+
 				auto& factor = m_Factor[rarity][level];
 				auto& transformer = m_Transformer[rarity][level];
-
 
 				for (const SkinCollection& collection : db->m_Collections) {
 					float higherc = collection.m_SkinsByRarity[rarity + 1].size();
@@ -64,7 +67,7 @@ namespace elker {
 					for (const Skin& first : collection.m_SkinsByRarity[rarity]) {
 						factor.insertBack(first.m_rID) = higherc;
 						for (const Skin& second : collection.m_SkinsByRarity[rarity + 1]) {
-							transformer_triplets.push_back({ (int) second.m_rID,(int)first.m_rID , 1 });
+							transformer_triplets.push_back({ static_cast<int>(second.m_rID), static_cast<int>(first.m_rID), 1 });
 						}
 					}
 				}
@@ -82,7 +85,7 @@ namespace elker {
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
 
-		return (gross / cost) > 1.2f && cost < 20.0f;
+		return (gross / cost) > 1.0f && cost < 20.0f;
 	}
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
@@ -96,7 +99,7 @@ namespace elker {
 		tradeup.cost = cost;
 		tradeup.grossreturn = gross;
 		tradeup.ev = tradeup.grossreturn - tradeup.cost;
-		tradeup.netreturn = tradeup.probability.dot(m_MappedPricesWithFees[tradeup.rarity][tradeup.level]);
+		tradeup.netreturn = tradeup.probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
 #if 0
 		const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		tradeup.variance = tradeup.probability.dot(m2);
@@ -116,10 +119,11 @@ namespace elker {
 	std::string Calculator::ExportTradeUp(TradeUp& tradeup) {
 		ComputeStatistical(tradeup);
 		std::stringstream ss;
-		const std::vector<Skin> skins = m_DB->GetSkins();
+		const std::vector<Skin> skins = m_DB->m_Skins;
 		const std::vector<size_t> ids_by_rarity = m_DB->m_SkinIDsByRarity[tradeup.rarity];
 		const std::vector<size_t> hids_by_rarity = m_DB->m_SkinIDsByRarity[tradeup.rarity + 1];
 
+		ss << tradeup.hash() << ",";
 		ss << tradeup.cost << ",";
 		ss << tradeup.ev << ",";
 		ss << tradeup.grossreturn - tradeup.cost << ",";
@@ -155,7 +159,7 @@ namespace elker {
 			if (probabilities(i) > 0.0f) {
 				size_t id = hids_by_rarity[i];
 				const SkinCondition condition = MapCondition(skins[id], g_Levels[tradeup.level / 2], tradeup.level & 1);
-				ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << StringFromWeaponCondition(condition) << ")," << std::to_string(skins[id].m_PricesSell[condition]) << "," << std::to_string(probabilities(i)) << ",";
+				ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << ShortStringFromWeaponCondition(condition) << ")," << std::to_string(skins[id].m_PricesSell[condition]) << "," << std::to_string(probabilities(i)) << ",";
 			}
 		}
 
@@ -271,7 +275,7 @@ namespace elker {
 	void Calculator::Bruteforce() {
 		EK_INFO("Bruteforcing...");
 		std::ofstream of("b:/out_now_outher.csv");
-		of << "Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
+		of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
 		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
 		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i + 1 << "," << "Chance" << i + 1 << ",";
 		of << "\n";
@@ -324,5 +328,123 @@ namespace elker {
 		of.close();
 		EK_INFO("Sucessfully exported all tradeups");
 
+	}
+
+	struct ShortTradeUp {
+		bool			stattrak : 1;
+		SkinRarity		rarity : 3;
+		unsigned int	id0 : 10;
+		unsigned int	condition0 : 3;
+		unsigned int	id1 : 10;
+		unsigned int	condition1 : 3;
+		unsigned int	id2 : 10;
+		unsigned int	condition2 : 3;
+		unsigned int	id3 : 10;
+		unsigned int	condition3 : 3;
+		unsigned int	id4 : 10;
+		unsigned int	condition4 : 3;
+		unsigned int	id5 : 10;
+		unsigned int	condition5 : 3;
+		unsigned int	id6 : 10;
+		unsigned int	condition6 : 3;
+		unsigned int	id7 : 10;
+		unsigned int	condition7 : 3;
+		unsigned int	id8 : 10;
+		unsigned int	condition8 : 3;
+		unsigned int	id9 : 10;
+		unsigned int	condition9 : 3;
+	};
+
+	ShortTradeUp ToShortTradeUp(TradeUp tradeup) {
+		ShortTradeUp stu;
+		stu.stattrak = tradeup.level & 1;
+		stu.rarity = tradeup.rarity;
+
+		const Eigen::VectorXf mask = tradeup.mask.toDense();
+
+		int k = 0;
+		SkinCondition cond[10] = { SkinCondition::Max };
+		size_t ids[10] = { 0 };
+
+		for (int i = 0; i < tradeup.nSkins; i++) {
+			if (mask(i) > 0.0f) {
+				const int amount = static_cast<int>(mask(i));
+				for (int j = 0; j < amount; j++) {
+					cond[k] = ConditionFromFloat(g_Levels[tradeup.level / 2], false);
+					ids[k] = i;
+					k++;
+				}
+			}
+		}
+
+		stu.condition0 = static_cast<unsigned int>(cond[0]);
+		stu.id0 = ids[0];
+		stu.condition1 = static_cast<unsigned int>(cond[1]);
+		stu.id1 = ids[1];
+		stu.condition2 = static_cast<unsigned int>(cond[2]);
+		stu.id2 = ids[2];
+		stu.condition3 = static_cast<unsigned int>(cond[3]);
+		stu.id3 = ids[3];
+		stu.condition4 = static_cast<unsigned int>(cond[4]);
+		stu.id4 = ids[4];
+		stu.condition5 = static_cast<unsigned int>(cond[5]);
+		stu.id5 = ids[5];
+		stu.condition6 = static_cast<unsigned int>(cond[6]);
+		stu.id6 = ids[6];
+		stu.condition7 = static_cast<unsigned int>(cond[7]);
+		stu.id7 = ids[7];
+		stu.condition8 = static_cast<unsigned int>(cond[8]);
+		stu.id8 = ids[8];
+		stu.condition9 = static_cast<unsigned int>(cond[9]);
+		stu.id9 = ids[9];
+
+		return stu;
+	}
+
+	TradeUp FromShortTradeUp(ShortTradeUp stu, int nSkins, int level) {
+		TradeUp t(nSkins, level, stu.rarity);
+
+		t.mask.coeffRef(stu.id0)++;
+		t.mask.coeffRef(stu.id1)++;
+		t.mask.coeffRef(stu.id2)++;
+		t.mask.coeffRef(stu.id3)++;
+		t.mask.coeffRef(stu.id4)++;
+		t.mask.coeffRef(stu.id5)++;
+		t.mask.coeffRef(stu.id6)++;
+		t.mask.coeffRef(stu.id7)++;
+		t.mask.coeffRef(stu.id8)++;
+		t.mask.coeffRef(stu.id9)++;
+
+		t.nSkins = nSkins;
+		t.level = level;
+
+		return t;
+	}
+
+	constexpr size_t BUF_SIZE_BYTES = 24;
+
+	TradeUp::TradeUp(std::string hash, size_t nRSkins, size_t l) {
+		mask.resize(nSkins);
+		cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
+		Clear();
+		std::vector<unsigned char> b = base64_decode(hash);
+		unsigned char buf[BUF_SIZE_BYTES];
+		for (int i = 0; i < BUF_SIZE_BYTES; i++) {
+			buf[i] = b[i];
+		}
+		ShortTradeUp stu;
+		std::memcpy(&stu, buf, BUF_SIZE_BYTES);
+		TradeUp t = FromShortTradeUp(stu, nRSkins, l);
+		mask = t.mask;
+		rarity = t.rarity;
+		level = t.level;
+		nSkins = t.nSkins;
+	}
+
+	std::string TradeUp::hash() {
+		unsigned char buf[BUF_SIZE_BYTES];
+		ShortTradeUp stu = ToShortTradeUp(*this);
+		std::memcpy(buf, &stu, BUF_SIZE_BYTES);
+		return base64_encode(buf, BUF_SIZE_BYTES);
 	}
 }

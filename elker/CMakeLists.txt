@@ -3,7 +3,7 @@
 #
 
 # Add source to this project's executable.
-add_executable (elker "elker.cpp" "elker.hpp" "skin.hpp" "skin.cpp" "tradeup.hpp" "tradeup.cpp" "log.cpp")
+add_executable (elker "elker.cpp" "elker.hpp" "skin.hpp" "skin.cpp" "tradeup.hpp" "tradeup.cpp" "log.cpp" "base64.cpp")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET elker PROPERTY CXX_STANDARD 20)
