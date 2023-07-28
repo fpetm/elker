@@ -5,7 +5,7 @@
 #include <array>
 #include <iterator>
 
-namespace elker {
+namespace motek {
 	enum WeaponClass {
 		Knives			= 1 << 8,
 		Pistol			= 1 << 9,

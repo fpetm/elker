@@ -1,7 +1,8 @@
 #pragma once
-	#include <vector>
-	#include <string>
-namespace elker {
+#include <vector>
+#include <string>
+
+namespace motek {
 	typedef unsigned char BYTE;
 
 	std::string base64_encode(BYTE const* buf, unsigned int bufLen);

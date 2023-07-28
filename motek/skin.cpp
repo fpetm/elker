@@ -1,19 +1,19 @@
-#include "skin.hpp"
-#include "log.hpp"
+#include <motek/skin.hpp>
+#include <motek/log.hpp>
 
 #include <vector>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
-namespace elker {
+namespace motek {
     std::vector<std::vector<std::string>> parseCSV(const std::string& filename) {
         std::vector<std::vector<std::string>> data;
 
         // Open the file
         std::ifstream file(filename);
         if (!file.is_open()) {
-            EK_ERROR("Failed to open CSV ({})", filename);
+            MT_ERROR("Failed to open CSV ({})", filename);
             return data;
         }
 
@@ -29,7 +29,7 @@ namespace elker {
 
             data.push_back(row);
         }
-        EK_INFO("Succesfully parsed CSV ({})!", filename);
+        MT_INFO("Succesfully parsed CSV ({})!", filename);
 
         // Close the file
         file.close();
@@ -234,7 +234,7 @@ namespace elker {
             else if (row[2] == "Classified") rarity = SkinRarity::Classified;
             else if (row[2] == "Covert") rarity = SkinRarity::Covert;
             else if (row[2] == "Contraband") continue;
-            else EK_ERROR("Unknown rarity (skin: {}): {}", row[0], row[2]);
+            else MT_ERROR("Unknown rarity (skin: {}): {}", row[0], row[2]);
 
             for (SkinCollection& coll : m_Collections) {
                 if (coll.m_Name == collection) {
@@ -269,7 +269,6 @@ namespace elker {
             }
         }
 
-        EK_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(), m_Collections.size());
-
+        MT_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(), m_Collections.size());
     }
 }

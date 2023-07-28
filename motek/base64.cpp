@@ -1,6 +1,6 @@
-#include "base64.hpp"
+#include <motek/base64.hpp>
 
-namespace elker {
+namespace motek {
     static const std::string base64_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"

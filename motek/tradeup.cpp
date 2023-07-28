@@ -1,22 +1,21 @@
-﻿#include "tradeup.hpp"
+﻿#include <motek/tradeup.hpp>
 #include <iostream>
 #include <thread>
 #include <functional>
 #include <fstream>
 #include <bitset>
 
-#include "util.hpp"
-#include "log.hpp"
-#include "partitions.hpp"
-#include "base64.hpp"
+#include <motek/log.hpp>
+#include <motek/partitions.hpp>
+#include <motek/base64.hpp>
 
 // computation amount
 #define L2
-#define L3
+//#define L3
 
 #define MT
 
-namespace elker {
+namespace motek {
 	static size_t g_TradeUpCount;
 	static std::mutex g_TradeUpCountMutex;
 
@@ -24,7 +23,7 @@ namespace elker {
 	static std::mutex g_FinishedMutex;
 
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
-		EK_INFO("Building calculator..");
+		MT_INFO("Building calculator..");
 		
 		for (SkinRarity rarity : {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec, SkinRarity::Restricted, SkinRarity::Classified, SkinRarity::Covert}) {
 			const std::vector<size_t> &ids = m_DB->m_SkinIDsByRarity[rarity];
@@ -73,7 +72,7 @@ namespace elker {
 				transformer.makeCompressed();
 			}
 		}
-		EK_INFO("Built calculator");
+		MT_INFO("Built calculator");
 	}
 
 	bool Calculator::Compute(TradeUp& tradeup) const {
@@ -110,7 +109,7 @@ namespace elker {
 		const Eigen::VectorXf p = probability;
 		const Eigen::VectorXf ma = tradeup.mask.toDense();
 #endif
-		//EK_INFO("FF");
+		//MT_INFO("FF");
 		//const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		//tradeup.variance = tradeup.probability.dot(m2);
 		//tradeup.stddev = std::sqrt(tradeup.variance);
@@ -164,7 +163,7 @@ namespace elker {
 		}
 
 		//if (probabilities.sum() > 1.0f)
-		//	EK_ERROR("Bad Tradeup!");
+		//	MT_ERROR("Bad Tradeup!");
 
 		for (int i = 0; i < hids_by_rarity.size(); i++) {
 			if (probabilities(i) > 0.0f) {
@@ -192,7 +191,7 @@ namespace elker {
 			std::lock_guard<std::mutex> countguard(g_TradeUpCountMutex);
 			size_t current = g_TradeUpCount;
 
-			EK_INFO("  Searched total of {:15d} tradeups ({:8d} last second)", current, current - lastCount);
+			MT_INFO("  Searched total of {:15d} tradeups ({:8d} last second)", current, current - lastCount);
 			lastCount = current;
 
 			std::lock_guard<std::mutex> finishedguard(g_FinishedMutex);
@@ -270,7 +269,7 @@ namespace elker {
 	}
 
 	void Calculator::Bruteforce() {
-		EK_INFO("Bruteforcing...");
+		MT_INFO("Bruteforcing...");
 		std::ofstream of("out.csv");
 		of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
 		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
@@ -318,17 +317,17 @@ namespace elker {
 				all_tradeups.push_back(tradeup);
 			}
 		}
-		EK_INFO("Succesful bruteforcing, serched {}, found {} profitable tradeups in {} seconds ({:.2f} tradeups/second)!", g_TradeUpCount, tupt, time, g_TradeUpCount / time);
+		MT_INFO("Succesful bruteforcing, serched {}, found {} profitable tradeups in {} seconds ({:.2f} tradeups/second)!", g_TradeUpCount, tupt, time, g_TradeUpCount / time);
 
 		std::sort(all_tradeups.begin(), all_tradeups.end(),
 			[](TradeUp t1, TradeUp t2) {return ((t1.grossreturn / t1.cost) > (t2.grossreturn / t2.cost)); });
 
-		EK_INFO("Exporting...");
+		MT_INFO("Exporting...");
 		for (TradeUp t : all_tradeups) {
 			of << ExportTradeUp(t);
 		}
 		of.close();
-		EK_INFO("Sucessfully exported all tradeups");
+		MT_INFO("Sucessfully exported all tradeups");
 
 	}
 

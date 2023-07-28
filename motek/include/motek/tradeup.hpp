@@ -6,7 +6,7 @@
 #include <Eigen/Sparse>
 #pragma warning(pop)
 
-namespace elker {
+namespace motek {
 	class TradeUp;
 
 	static constexpr int g_nLevels = 5;
