@@ -77,7 +77,8 @@ namespace elker {
 	}
 
 	bool Calculator::Compute(TradeUp& tradeup) const {
-		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / factor;
 
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
@@ -86,7 +87,9 @@ namespace elker {
 	}
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
-		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		// TODO WHY THE FUCK IS THIS NOT FUCKING WORKING
+		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / factor;
 
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity + 1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
@@ -96,9 +99,18 @@ namespace elker {
 		tradeup.grossreturn = gross;
 		tradeup.ev = tradeup.grossreturn - tradeup.cost;
 		tradeup.netreturn = tradeup.probability.dot(m_MappedPrices[tradeup.rarity+1][tradeup.level]);
+#if 0	
+		const Eigen::MatrixXf m = m_Transformer[tradeup.rarity][tradeup.level];
+		const Eigen::VectorXf uw = m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask;
+		const Eigen::VectorXf b1 = m.col(22);
+		const Eigen::VectorXf b2 = m.col(23);
+		const Eigen::VectorXf pr = m_Prices[tradeup.rarity][tradeup.level];
 
-		const Eigen::VectorXf p = probability.toDense();
-
+		const float f = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		const Eigen::VectorXf p = probability;
+		const Eigen::VectorXf ma = tradeup.mask.toDense();
+#endif
+		//EK_INFO("FF");
 		//const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		//tradeup.variance = tradeup.probability.dot(m2);
 		//tradeup.stddev = std::sqrt(tradeup.variance);
@@ -115,7 +127,7 @@ namespace elker {
 	}
 
 	std::string Calculator::ExportTradeUp(TradeUp& tradeup) const {
-		//ComputeStatistical(tradeup);
+		ComputeStatistical(tradeup);
 		std::stringstream ss;
 		const std::vector<Skin> skins = m_DB->m_Skins;
 		const std::vector<size_t> ids_by_rarity = m_DB->m_SkinIDsByRarity[tradeup.rarity];
@@ -150,6 +162,9 @@ namespace elker {
 				}
 			}
 		}
+
+		//if (probabilities.sum() > 1.0f)
+		//	EK_ERROR("Bad Tradeup!");
 
 		for (int i = 0; i < hids_by_rarity.size(); i++) {
 			if (probabilities(i) > 0.0f) {
@@ -204,21 +219,20 @@ namespace elker {
 				TradeUp tradeup(nRSkins, level, rarity);
 				size_t l_TradeUpCount = 0;
 
-				tradeup.mask.insert(id1) = 10;
+				tradeup.mask.coeffRef(id1) = 10;
 				l_TradeUpCount++;
 				if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-				tradeup.mask.insert(id1) = 0;
 
 #ifdef L2
 				for (size_t id2 : ids_by_rarity[rarity]) {
 					if (id2 == id1) continue;
-					TradeUp tradeup(nRSkins, level, rarity);
 					for (const auto p : p2) {
 						const float A = p[0];
 						const float B = p[1];
 
-						tradeup.mask.insert(id1) = A;
-						tradeup.mask.insert(id2) = B;
+						TradeUp tradeup(nRSkins, level, rarity);
+						tradeup.mask.coeffRef(id1) = A;
+						tradeup.mask.coeffRef(id2) = B;
 
 						l_TradeUpCount++;
 						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
@@ -320,7 +334,6 @@ namespace elker {
 		EK_INFO("Exporting...");
 		unsigned long long k = 0;
 		for (TradeUp t : all_tradeups) {
-			ComputeStatistical(t);
 			of << ExportTradeUp(t);
 			if (k++ > (1 << 15)) {
 				break;
@@ -422,7 +435,7 @@ namespace elker {
 		return t;
 	}
 
-	constexpr size_t BUF_SIZE_BYTES = 24;
+	constexpr size_t BUF_SIZE_BYTES = sizeof(ShortTradeUp);
 
 	TradeUp::TradeUp(std::string hash, size_t nRSkins, size_t l) {
 		mask.resize(nSkins);

@@ -1,0 +1,11 @@
+#pragma once
+
+namespace elker::cmake {
+inline constexpr std::string_view elker_version = "@PROJECT_VERSION@";
+inline constexpr int elker_version_major { @PROJECT_VERSION_MAJOR@ };
+inline constexpr int elker_version_minor { @PROJECT_VERSION_MINOR@ };
+inline constexpr int elker_version_patch { @PROJECT_VERSION_PATCH@ };
+inline constexpr int elker_version_tweak { @PROJECT_VERSION_TWEAK@ };
+inline constexpr std::string_view git_hash = "@GIT_HASH@";
+inline constexpr std::string_view git_short = "@GIT_HASH@";
+}

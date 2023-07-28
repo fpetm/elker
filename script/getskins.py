@@ -157,6 +157,11 @@ def main():
         if 'description_string' in paint_kit[1]: description_string = translate(names, paint_kit[1]['description_string'][1:])
         if 'description_tag' in paint_kit[1]: description_tag = translate(names, paint_kit[1]['description_tag'][1:])
 
+        # THIS IS AN UGLY FIX BUT I DON'T CARE
+        if name == 'hy_ddpat_orange': 
+            wear_remap_min = 0.06
+            wear_remap_max = 0.80
+
         wear_remap_min = 0.0
         wear_remap_max = 1.0
         if 'wear_remap_min' in paint_kit[1]:
