@@ -12,7 +12,7 @@
 
 // computation amount
 #define L2
-//#define L3
+#define L3
 
 #define MT
 
@@ -47,9 +47,9 @@ namespace elker {
 					SkinCondition condition = ConditionFromFloat(g_Levels[level / 2], level & 1);
 					SkinCondition mapped_condition = MapCondition(skin, g_Levels[level / 2], level & 1);
 
-					m_Prices[rarity][level].insertBack(skin.m_rID) = skin.m_PricesBuy[condition];
-					m_MappedPrices[rarity][level].insertBack(skin.m_rID) = skin.m_PricesSell[mapped_condition];
-					m_MappedPricesWithFees[rarity][level].insertBack(skin.m_rID) = skin.m_PricesSell[mapped_condition] * 0.85f - 0.01f;
+					m_Prices[rarity][level].insertBack(skin.m_rID) = skin.m_PricesSell[condition];
+					m_MappedPrices[rarity][level].insertBack(skin.m_rID) = skin.m_PricesBuy[mapped_condition];
+					m_MappedPricesWithFees[rarity][level].insertBack(skin.m_rID) = skin.m_PricesBuy[mapped_condition] * 0.87f - 0.01f;
 				}
 			}
 
@@ -83,7 +83,7 @@ namespace elker {
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
 
-		return (gross / cost) > 1.5f && cost < 20.0f;
+		return (gross / cost) > 1.0f;
 	}
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
@@ -158,7 +158,7 @@ namespace elker {
 				const int amount = static_cast<int>(mask(i));
 				for (int j = 0; j < amount; j++) {
 					const SkinCondition condition = ConditionFromFloat(g_Levels[tradeup.level / 2], tradeup.level & 1);
-					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " ($" << skins[id].m_PricesBuy[condition] << "),";
+					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " ($" << skins[id].m_PricesSell[condition] << "),";
 				}
 			}
 		}
@@ -171,7 +171,7 @@ namespace elker {
 				size_t id = hids_by_rarity[i];
 				const SkinCondition condition = MapCondition(skins[id], g_Levels[tradeup.level / 2], tradeup.level & 1);
 				ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << ShortStringFromWeaponCondition(condition) << ")" << ",";
-				ss << std::to_string(skins[id].m_PricesSell[condition] * 0.85f - 0.01f) << ",";
+				ss << std::to_string(skins[id].m_PricesBuy[condition] * 0.87f - 0.01f) << ",";
 				ss << std::to_string(probabilities(i)) << ", ";
 			}
 		}
@@ -242,25 +242,18 @@ namespace elker {
 #ifdef L3
 					for (size_t id3 : ids_by_rarity[rarity]) {
 						if (id3 == id2 || id3 == id1) continue;
-						TradeUp tradeup(nRSkins, level, rarity);
-						for (float v1 = 1.0f; v1 <= 10.0f; v1 += 1.0f) {
-							for (float v2 = 1.0f; v2 <= 10.0f; v2 += 1.0f) {
-								if (v1 + v2 >= 10) continue;
-								const float A = v1;
-								const float B = v2;
-								const float C = 10.0f - v1 - v2;
+						for (const auto p : p3) {
+							TradeUp tradeup(nRSkins, level, rarity);
+							const float A = p[0];
+							const float B = p[1];
+							const float C = p[2];
 
-								tradeup.mask.insert(id1) = A;
-								tradeup.mask.insert(id2) = B;
-								tradeup.mask.insert(id3) = C;
+							tradeup.mask.insert(id1) = A;
+							tradeup.mask.insert(id2) = B;
+							tradeup.mask.insert(id3) = C;
 
-								if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-
-							}
+							if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 						}
-						tradeup.mask.insert(id1) = 0;
-						tradeup.mask.insert(id2) = 0;
-						tradeup.mask.insert(id3) = 0;
 
 						std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
 						g_TradeUpCount += l_TradeUpCount;
@@ -278,14 +271,13 @@ namespace elker {
 
 	void Calculator::Bruteforce() {
 		EK_INFO("Bruteforcing...");
-		std::ofstream of("b:/out_now_outher.csv");
+		std::ofstream of("out.csv");
 		of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
 		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
 		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i + 1 << "," << "Chance" << i + 1 << ",";
 		of << "\n";
 		std::thread threads[g_nLevels * 2], reporter;
 		std::vector<TradeUp> tradeups[g_nLevels * 2];
-
 
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 #ifdef MT
@@ -332,12 +324,8 @@ namespace elker {
 			[](TradeUp t1, TradeUp t2) {return ((t1.grossreturn / t1.cost) > (t2.grossreturn / t2.cost)); });
 
 		EK_INFO("Exporting...");
-		unsigned long long k = 0;
 		for (TradeUp t : all_tradeups) {
 			of << ExportTradeUp(t);
-			if (k++ > (1 << 15)) {
-				break;
-			}
 		}
 		of.close();
 		EK_INFO("Sucessfully exported all tradeups");

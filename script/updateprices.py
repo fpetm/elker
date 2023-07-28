@@ -2,7 +2,10 @@ import market, json, csv
 
 data = []
 
-with open('skindata.csv', 'r', encoding='utf8') as f:
+SKINDATA_PATH = './resources/skindata.csv'
+SKINS_PATH = './resources/skins.csv'
+
+with open(SKINDATA_PATH, 'r', encoding='utf8') as f:
     reader = csv.reader(f, delimiter = ',', quotechar = '"')
     for row in reader:
         if row[0] == 'name': continue
@@ -14,7 +17,7 @@ with open('skindata.csv', 'r', encoding='utf8') as f:
         wear_max = float(row[5])
         data.append({'name':name, 'weapon' : weapon_type, 'rarity' : rarity, 'collection' : collection, 'wear_min' : wear_min, 'wear_max' : wear_max})
 
-with open('skins.csv', 'w', encoding='utf8', newline='') as f:
+with open(SKINS_PATH, 'w', encoding='utf8', newline='') as f:
     writer = csv.writer(f, delimiter=',')
     writer.writerow(['NAME', 'COLLECTION', 'RARITY', 'WEAPON', 'WEAR_MIN', 'WEAR_MAX', 
                      'PRICE_BS_SELL',       'PRICE_WW_SELL',    'PRICE_FT_SELL',    'PRICE_MW_SELL',    'PRICE_FN_SELL',
@@ -30,8 +33,6 @@ with open('skins.csv', 'w', encoding='utf8', newline='') as f:
         WEAR_MIN = skin['wear_min']
         WEAR_MAX = skin['wear_max']
 
-        #if not COLLECTION in ('The Horizon Collection', 'The Danger Zone Collection', 'The Prisma Collection', 'The CS20 Collection', 'The Shattered Web Collection', 'The Prisma 2 Collection', 'The Fracture Collection', 'The Broken Fang Collection', 'The Snakebite Collection', 'The Operation Riptide Collection', 'The Dreams & Nightmares Collection', 'The Recoil Collection', 'The Revolution Collection'):
-        #     continue
         print(skin)
         SPRICE = {}
         SPRICEST = {}
@@ -40,8 +41,6 @@ with open('skins.csv', 'w', encoding='utf8', newline='') as f:
 
 
         for wear in ['Battle-Scarred', 'Well-Worn', 'Field-Tested', 'Minimal Wear', 'Factory New']:
-            #PRICE[wear] = -1
-            #PRICEST[wear] = -1
             SPRICE[wear], BPRICE[wear] = market.get_csgo_item(WEAPON + ' | ' + NAME + ' (' + wear + ')')
             SPRICEST[wear], BPRICEST[wear] = market.get_csgo_item('StatTrak™ ' + WEAPON + ' | ' + NAME + ' (' + wear + ')')
 

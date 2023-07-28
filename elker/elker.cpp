@@ -9,10 +9,10 @@ int main() {
 
 	EK_INFO("Welcome to elker v{}-{}", elker::cmake::elker_version, elker::cmake::git_hash);
 
-	std::shared_ptr<elker::SkinDB> db = std::make_shared<elker::SkinDB>();
+	std::shared_ptr<elker::SkinDB> db = std::make_shared<elker::SkinDB>("./resources/skins.csv");
 	elker::Calculator calc(db);
 
 	calc.Bruteforce();
-
+	
 	return 0;
 }

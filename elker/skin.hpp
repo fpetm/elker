@@ -139,7 +139,7 @@ namespace elker {
 
 	class SkinDB {
 	public:
-		SkinDB(std::string skinpath = "C:/prog/elker/skins.csv");
+		SkinDB(std::string skinpath);
 		void AddCollection(SkinCollection &collection) {
 			m_Collections.push_back(collection);
 			for (auto& skin : collection) {

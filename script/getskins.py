@@ -105,14 +105,18 @@ class PaintKit:
         self.wear_min = wear_min
         self.wear_max = wear_max
 
+ITEM_GAME_PATH = './resources/items_game.txt'
+CSGO_ENGLISH_PATH = './resources/csgo_english.txt'
+SKINDATA_PATH = './resources/skindata.csv'
+
 def main():
     def translate(dictionary, name):
         if name in dictionary:
             return dictionary[name]
         else:
             return None
-    items_game = load("c:/prog/elker/script/items_game.txt")
-    csgo_english = load("c:/prog/elker/script/csgo_english.txt")
+    items_game = load(ITEM_GAME_PATH)
+    csgo_english = load(CSGO_ENGLISH_PATH)
 
     names = csgo_english['lang']['Tokens']
     
@@ -212,7 +216,7 @@ def main():
                     collection = item_set
                     skins.append({'paint_kit' : paint_kit, 'weapon' : w['weapon'], 'collection' : collection})
 
-    with open('skindata.csv', 'w', newline = '', encoding = 'utf8') as f:
+    with open(SKINDATA_PATH, 'w', newline = '', encoding = 'utf8') as f:
         writer = csv.writer(f, delimiter = ',', quotechar = '"', quoting = csv.QUOTE_MINIMAL)
         writer.writerow(['name', 'weapon_type', 'rarity', 'collection', 'wear_min', 'wear_max'])
         for skin in skins:
