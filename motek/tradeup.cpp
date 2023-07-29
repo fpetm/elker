@@ -78,13 +78,13 @@ namespace motek {
 	}
 
 	bool Calculator::Compute(TradeUp& tradeup) const {
-		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
-		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / factor;
+		//const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
+		//const Eigen::SparseVector<float> probability =;;
 
-		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.rarity+1][tradeup.level]);
+		const float gross = ((m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level])).dot(m_MappedPricesWithFees[tradeup.rarity + 1][tradeup.level]);
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
 
-		return (gross / cost) > 1.0f;
+		return gross > cost;
 	}
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {

@@ -48,7 +48,7 @@ namespace motek {
 		void Clear() {
 			computed = false;
 			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
-			mask.setZero();
+			//mask.setZero();
 		}
 
 		std::string hash() const;
