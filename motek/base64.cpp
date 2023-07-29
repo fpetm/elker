@@ -1,4 +1,4 @@
-#include <motek/base64.hpp>
+#include "base64.hpp"
 
 namespace motek {
     static const std::string base64_chars =

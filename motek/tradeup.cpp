@@ -6,12 +6,14 @@
 #include <bitset>
 
 #include <motek/log.hpp>
-#include <motek/partitions.hpp>
-#include <motek/base64.hpp>
+
+#include "base64.hpp"
+#include "partitions.hpp"
 
 // computation amount
 #define L2
-//#define L3
+#define L3
+//#define L4
 
 #define MT
 
@@ -98,18 +100,7 @@ namespace motek {
 		tradeup.grossreturn = gross;
 		tradeup.ev = tradeup.grossreturn - tradeup.cost;
 		tradeup.netreturn = tradeup.probability.dot(m_MappedPrices[tradeup.rarity+1][tradeup.level]);
-#if 0	
-		const Eigen::MatrixXf m = m_Transformer[tradeup.rarity][tradeup.level];
-		const Eigen::VectorXf uw = m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask;
-		const Eigen::VectorXf b1 = m.col(22);
-		const Eigen::VectorXf b2 = m.col(23);
-		const Eigen::VectorXf pr = m_Prices[tradeup.rarity][tradeup.level];
 
-		const float f = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
-		const Eigen::VectorXf p = probability;
-		const Eigen::VectorXf ma = tradeup.mask.toDense();
-#endif
-		//MT_INFO("FF");
 		//const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn)).matrix();
 		//tradeup.variance = tradeup.probability.dot(m2);
 		//tradeup.stddev = std::sqrt(tradeup.variance);
@@ -147,7 +138,6 @@ namespace motek {
 		ss << g_Levels[tradeup.level / 2] << ",";
 		ss << std::to_string(tradeup.level & 1) << ",";
 
-		// TODO this is extremely slow
 		const Eigen::VectorXf mask = tradeup.mask.toDense();
 		const Eigen::VectorXf probabilities = tradeup.probability.toDense();
 
@@ -161,9 +151,6 @@ namespace motek {
 				}
 			}
 		}
-
-		//if (probabilities.sum() > 1.0f)
-		//	MT_ERROR("Bad Tradeup!");
 
 		for (int i = 0; i < hids_by_rarity.size(); i++) {
 			if (probabilities(i) > 0.0f) {
@@ -215,12 +202,11 @@ namespace motek {
 		for (SkinRarity rarity : {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec, SkinRarity::Restricted, SkinRarity::Classified}) {
 			size_t nRSkins = calculator.m_DB->m_SkinIDsByRarity[rarity].size();
 			for (size_t id1 : ids_by_rarity[rarity]) {
-				TradeUp tradeup(nRSkins, level, rarity);
 				size_t l_TradeUpCount = 0;
-
+				TradeUp tradeup(nRSkins, level, rarity);
 				tradeup.mask.coeffRef(id1) = 10;
-				l_TradeUpCount++;
 				if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+				l_TradeUpCount++;
 
 #ifdef L2
 				for (size_t id2 : ids_by_rarity[rarity]) {
@@ -233,9 +219,8 @@ namespace motek {
 						tradeup.mask.coeffRef(id1) = A;
 						tradeup.mask.coeffRef(id2) = B;
 
-						l_TradeUpCount++;
 						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-
+						l_TradeUpCount++;
 					}
 
 #ifdef L3
@@ -252,29 +237,40 @@ namespace motek {
 							tradeup.mask.insert(id3) = C;
 
 							if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+							l_TradeUpCount++;
 						}
+#ifdef L4
+						for (size_t id4 : ids_by_rarity[rarity]) {
+							if (id4 == id3 || id4 == id2 || id4 == id1) continue;
+							for (const auto p : p4) {
+								TradeUp tradeup(nRSkins, level, rarity);
+								const float A = p[0];
+								const float B = p[1];
+								const float C = p[2];
+								const float D = p[3];
 
-						std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
-						g_TradeUpCount += l_TradeUpCount;
+								tradeup.mask.insert(id1) = A;
+								tradeup.mask.insert(id2) = B;
+								tradeup.mask.insert(id3) = C;
+								tradeup.mask.insert(id4) = D;
+
+								if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+								l_TradeUpCount++;
+							}
+						}
+#endif
 					}
-#else
-
-					std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
-					g_TradeUpCount += l_TradeUpCount;
 #endif
 				}
 #endif
+				std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
+				g_TradeUpCount += l_TradeUpCount;
 			}
 		}
 	}
 
 	void Calculator::Bruteforce() {
 		MT_INFO("Bruteforcing...");
-		std::ofstream of("out.csv");
-		of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
-		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
-		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i + 1 << "," << "Chance" << i + 1 << ",";
-		of << "\n";
 		std::thread threads[g_nLevels * 2], reporter;
 		std::vector<TradeUp> tradeups[g_nLevels * 2];
 
@@ -303,6 +299,7 @@ namespace motek {
 			std::lock_guard<std::mutex> guard(g_FinishedMutex);
 			g_Finished = true;
 		}
+
 		reporter.join();
 
 		size_t tupc = 0;
@@ -322,6 +319,11 @@ namespace motek {
 		std::sort(all_tradeups.begin(), all_tradeups.end(),
 			[](TradeUp t1, TradeUp t2) {return ((t1.grossreturn / t1.cost) > (t2.grossreturn / t2.cost)); });
 
+		std::ofstream of("out.csv");
+		of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
+		for (int i = 0; i < 10; i++) of << "Weapon" << i + 1 << ",";
+		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i + 1 << "," << "Chance" << i + 1 << ",";
+		of << "\n";
 		MT_INFO("Exporting...");
 		for (TradeUp t : all_tradeups) {
 			of << ExportTradeUp(t);
