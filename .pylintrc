@@ -1,0 +1,7 @@
+[MESSAGES CONTROL]
+disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
+[General]
+max-locals=64
+max-statements=128
+max-branches=128
+max-bool-expr=16

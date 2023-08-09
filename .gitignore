@@ -5,3 +5,5 @@ build/
 *.log
 compile_commands.json
 .ccls-cache
+resources/csgostash.csv
+script/__pycache__/
