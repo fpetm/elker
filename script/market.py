@@ -1,7 +1,12 @@
 import json
-import requests
+import os
 
-KEY = 'D6LwF248v8SFi5QLk2C7IiY8UlM'
+import requests
+import dotenv
+
+dotenv.load_dotenv()
+
+KEY = os.getenv('STEAMAPIS_API_KEY')
 APPID = '730'
 
 def get_csgo_item(name):
