@@ -83,9 +83,9 @@ def dump_csgostash(path):
     return skins
 
 def main():
-    skins_csgostash = dump_csgostash('resources/csgostash.csv')
+    #    skins_csgostash = dump_csgostash('resources/csgostash.csv')
     skins_og = load_skindata_csv('resources/skindata.csv')
-#    skins_csgostash = load_skins_csgostash_csv('resources/csgostash.csv')
+    skins_csgostash = load_skins_csgostash_csv('resources/csgostash.csv')
 
     for skin_pair in skins_og.items():
         skin = skin_pair[0]
@@ -94,7 +94,7 @@ def main():
             continue
         if not (skins_og[skin][0] == skins_csgostash[skin][0] and
                 skins_og[skin][1] == skins_csgostash[skin][1]):
-            print(f'{format} : mismatched wear values',
+            print(f'{skin} : mismatched wear values',
                   f'min : {skins_og[skin][0]} : {skins_csgostash[skin][0]}',
                   f'max : {skins_og[skin][1]} : {skins_csgostash[skin][1]}')
 if __name__ == '__main__':

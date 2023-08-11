@@ -56,10 +56,10 @@ def update_prices(data):
             for condition in WEAR_VALUES:
                 sell_prices[condition], buy_prices[condition] = \
                         market.get_csgo_item(f'{weapon} | {name} ({condition})')
-                time.sleep(0.5)
+                time.sleep(0.1)
                 sell_prices_stattrak[condition], buy_prices_stattrak[condition] = \
                     market.get_csgo_item(f'StatTrak™ {weapon} | {name} ({condition})')
-                time.sleep(0.5)
+                time.sleep(0.1)
 
             print(sell_prices)
             print(sell_prices_stattrak)
