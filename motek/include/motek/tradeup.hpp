@@ -1,16 +1,15 @@
 #pragma once
 #include "skin.hpp"
 #include <iostream>
-#pragma warning(push, 0)
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#pragma warning(pop)
 
 namespace motek {
 	class TradeUp;
 
 	static constexpr int g_nLevels = 5;
-	static constexpr std::array<float, g_nLevels> g_Levels = { 0.06f, 0.11f, 0.265f, 0.415f, 0.725f};
+	static constexpr std::array<WearType, g_nLevels> g_Levels = { 60, 110, 265, 415, 725};
+
 	class Calculator {
 	public:
 		Calculator(std::shared_ptr<SkinDB> db);
@@ -20,7 +19,11 @@ namespace motek {
 
 		void Bruteforce();
 
-		bool Compute(TradeUp &tradeup) const;
+        bool Compute(TradeUp &tradeup) const {
+            return ComputeGross(tradeup) > ComputeCost(tradeup);
+        }
+		float ComputeGross(TradeUp &tradeup) const;
+		float ComputeCost(TradeUp &tradeup) const;
 		void ComputeStatistical(TradeUp& tradeup) const;
 
 		std::shared_ptr<SkinDB> m_DB;

@@ -6,6 +6,7 @@
 #include <iterator>
 
 namespace motek {
+  typedef int16_t WearType;
 	enum WeaponClass {
 		Knives			= 1 << 8,
 		Pistol			= 1 << 9,
@@ -87,7 +88,7 @@ namespace motek {
 
 	class Skin {
 	public:
-		Skin(std::string name, std::array<float, SkinCondition::Max> prices_sell, std::array<float, SkinCondition::Max> prices_buy, SkinRarity rarity, WeaponType weapontype, float wmin, float wmax, size_t id, size_t cid, size_t rid) :
+		Skin(std::string name, std::array<float, SkinCondition::Max> prices_sell, std::array<float, SkinCondition::Max> prices_buy, SkinRarity rarity, WeaponType weapontype, WearType wmin, WearType wmax, size_t id, size_t cid, size_t rid) :
 			m_Name(name), m_PricesSell(prices_sell), m_PricesBuy(prices_buy), m_Rarity(rarity), m_WeaponType(weapontype), wear_min(wmin), wear_max(wmax), m_ID(id), m_CollectionID(cid), m_rID(rid) {
 			m_Banned = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		}
@@ -99,7 +100,7 @@ namespace motek {
 		WeaponType m_WeaponType;
 		size_t m_CollectionID;
 		size_t m_ID, m_rID;
-		float wear_min, wear_max;
+		WearType wear_min, wear_max;
 		std::array<bool, SkinCondition::Max> m_Banned;
 	};
 
@@ -161,6 +162,6 @@ namespace motek {
 	std::string StringFromWeaponType(WeaponType type);
 	std::string StringFromWeaponCondition(SkinCondition condition);
 	std::string ShortStringFromWeaponCondition(SkinCondition condition);
-	SkinCondition ConditionFromFloat(float f, bool st);
-	SkinCondition MapCondition(const Skin& skin, float wear, bool stattrak);
+	SkinCondition ConditionFromFloat(WearType wear, bool st);
+	SkinCondition MapCondition(const Skin& skin, WearType wear, bool stattrak);
 }

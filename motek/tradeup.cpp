@@ -12,7 +12,7 @@
 
 // computation amount
 #define L2
-#define L3
+//#define L3
 //#define L4
 
 #define MT
@@ -77,15 +77,14 @@ namespace motek {
 		MT_INFO("Built calculator");
 	}
 
-	bool Calculator::Compute(TradeUp& tradeup) const {
-		//const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
-		//const Eigen::SparseVector<float> probability =;;
-
+    float Calculator::ComputeGross(TradeUp &tradeup) const {
 		const float gross = ((m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level])).dot(m_MappedPricesWithFees[tradeup.rarity + 1][tradeup.level]);
+        return gross;
+    }
+    float Calculator::ComputeCost(TradeUp &tradeup) const {
 		const float cost = tradeup.mask.dot(m_Prices[tradeup.rarity][tradeup.level]);
-
-		return gross > cost;
-	}
+        return cost;
+    }
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
 		// TODO WHY THE FUCK IS THIS NOT FUCKING WORKING
@@ -317,7 +316,7 @@ namespace motek {
 		MT_INFO("Succesful bruteforcing, serched {}, found {} profitable tradeups in {} seconds ({:.2f} tradeups/second)!", g_TradeUpCount, tupt, time, g_TradeUpCount / time);
 
 		std::sort(all_tradeups.begin(), all_tradeups.end(),
-			[](TradeUp t1, TradeUp t2) {return ((t1.grossreturn / t1.cost) > (t2.grossreturn / t2.cost)); });
+			[](TradeUp t1, TradeUp t2) {return ((t1.grossreturn / t1.cost) < (t2.grossreturn / t2.cost)); });
 
 		std::ofstream of("out.csv");
 		of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";

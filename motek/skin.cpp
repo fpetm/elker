@@ -157,25 +157,25 @@ namespace motek {
         }
     }
 
-    SkinCondition ConditionFromFloat(float f, bool st) {
+    SkinCondition ConditionFromFloat(WearType wear, bool st) {
         if (st) {
-            if (f >= 0.00f && f <= 0.07f) return SkinCondition::FN_ST;
-            else if (f > 0.07f && f <= 0.15f) return SkinCondition::MW_ST;
-            else if (f > 0.15f && f <= 0.38f) return SkinCondition::FT_ST;
-            else if (f > 0.38f && f <= 0.45f) return SkinCondition::WW_ST;
-            else if (f > 0.45f && f <= 1.00f) return SkinCondition::BS_ST;
+            if (wear >=       0 && wear <=   70) return SkinCondition::FN_ST;
+            else if (wear >  70 && wear <=  150) return SkinCondition::MW_ST;
+            else if (wear > 150 && wear <=  380) return SkinCondition::FT_ST;
+            else if (wear > 380 && wear <=  450) return SkinCondition::WW_ST;
+            else if (wear > 450 && wear <= 1000) return SkinCondition::BS_ST;
         } else {
-            if (f >= 0.00f && f <= 0.07f) return SkinCondition::FN;
-            else if (f > 0.07f && f <= 0.15f) return SkinCondition::MW;
-            else if (f > 0.15f && f <= 0.38f) return SkinCondition::FT;
-            else if (f > 0.38f && f <= 0.45f) return SkinCondition::WW;
-            else if (f > 0.45f && f <= 1.00f) return SkinCondition::BS;
+            if (wear >=       0 && wear <=   70) return SkinCondition::FN;
+            else if (wear >  70 && wear <=  150) return SkinCondition::MW;
+            else if (wear > 150 && wear <=  380) return SkinCondition::FT;
+            else if (wear > 380 && wear <=  450) return SkinCondition::WW;
+            else if (wear > 450 && wear <= 1000) return SkinCondition::BS;
         }
         return SkinCondition::Max;
     }
 
-    SkinCondition MapCondition(const Skin& skin, float wear, bool stattrak) {
-        const float newfloat = (skin.wear_max - skin.wear_min) * wear + skin.wear_min;
+    SkinCondition MapCondition(const Skin& skin, WearType wear, bool stattrak) {
+        const WearType newfloat = WearType((skin.wear_max - skin.wear_min) * (wear/1000.0f) + skin.wear_min);
         return ConditionFromFloat(newfloat, stattrak);
     }
 
@@ -238,7 +238,7 @@ namespace motek {
 
             for (SkinCollection& coll : m_Collections) {
                 if (coll.m_Name == collection) {
-                    coll.AddSkin(Skin(name, price_sell, price_buy, rarity, type, wear_min, wear_max, m_Skins.size(), coll.m_ID, m_SkinIDsByRarity[rarity].size()));
+                    coll.AddSkin(Skin(name, price_sell, price_buy, rarity, type, WearType(wear_min*1000), WearType(wear_max*1000), m_Skins.size(), coll.m_ID, m_SkinIDsByRarity[rarity].size()));
                     m_SkinIDsByRarity[rarity].push_back(m_Skins.size());
                     m_Skins.push_back(coll.LastSkin());
                 }
