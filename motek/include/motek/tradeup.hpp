@@ -4,11 +4,13 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
+#include "log.hpp"
+
 namespace motek {
 	class TradeUp;
 
 	static constexpr int g_nLevels = 5;
-	static constexpr std::array<WearType, g_nLevels> g_Levels = { 60, 110, 265, 415, 725};
+	static constexpr std::array<WearType, g_nLevels> g_Levels = { 0.060f, 0.110f, 0.265f, 0.415f, 0.725f};
 
 	class Calculator {
 	public:
@@ -66,6 +68,7 @@ namespace motek {
 		size_t nSkins;
 		SkinRarity rarity;
 		Eigen::SparseVector<float> mask;
+
 		size_t level;
 	};
 }

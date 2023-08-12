@@ -87,7 +87,6 @@ namespace motek {
     }
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
-		// TODO WHY THE FUCK IS THIS NOT FUCKING WORKING
 		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity][tradeup.level]);
 		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity][tradeup.level] * tradeup.mask) / factor;
 
