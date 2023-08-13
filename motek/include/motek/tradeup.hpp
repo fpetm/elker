@@ -31,9 +31,10 @@ namespace motek {
 		std::shared_ptr<SkinDB> m_DB;
 
 	private:
-		Eigen::SparseVector<float> m_Prices[2][SkinRarity::Contraband][g_WearRangeMax];
-		Eigen::SparseVector<float> m_MappedPrices[2][SkinRarity::Contraband][g_WearRangeMax];
-		Eigen::SparseVector<float> m_MappedPricesWithFees[2][SkinRarity::Contraband][g_WearRangeMax];
+		Eigen::VectorXf m_Prices[2][SkinRarity::Contraband][g_WearRangeMax];
+		Eigen::VectorXf m_MappedPrices[2][SkinRarity::Contraband][g_WearRangeMax];
+		Eigen::VectorXf m_MappedPricesWithFees[2][SkinRarity::Contraband][g_WearRangeMax];
+    Eigen::VectorXf m_PricesCompressed[2][SkinRarity::Contraband];
 
 		Eigen::SparseVector<float> m_Factor[SkinRarity::Contraband];
 		Eigen::SparseMatrix<float> m_Transformer[SkinRarity::Contraband];
@@ -41,8 +42,9 @@ namespace motek {
 
 	class TradeUp {
 	public:
-		TradeUp(size_t n, WearType avg_wear, bool st, SkinRarity r) : nSkins(n), average_wear(avg_wear), stattrak(st), computed(false), rarity(r) {
-			mask.resize(nSkins);
+		TradeUp(size_t n, WearType avg_wear, bool st, SkinRarity r, SkinCondition cond_no_st) : nSkins(n), average_wear(avg_wear), stattrak(st), computed(false), rarity(r), condition_no_stattrak(cond_no_st) {
+			mask_vector.resize(nSkins);
+      mask_big.resize(nSkins*5);
 			cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
 
 			Clear();
@@ -67,9 +69,11 @@ namespace motek {
 
 		size_t nSkins;
 		SkinRarity rarity;
-		Eigen::SparseVector<float> mask;
+		Eigen::SparseVector<float> mask_vector;
+    Eigen::SparseVector<float> mask_big;
 
     bool stattrak;
     WearType average_wear;
+    SkinCondition condition_no_stattrak;
 	};
 }

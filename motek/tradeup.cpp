@@ -14,7 +14,6 @@
 #define L2
 //#define L3
 //#define L4
-
 #define MT
 
 namespace motek {
@@ -52,12 +51,21 @@ namespace motek {
             SkinCondition condition = ConditionFromFloat(wear, stattrak);
             SkinCondition mapped_condition = MapCondition(skin, wear, stattrak);
 
-            m_Prices[stattrak][rarity][wear].insertBack(skin.m_rID) = skin.m_PricesSell[condition];
-            m_MappedPrices[stattrak][rarity][wear].insertBack(skin.m_rID) = skin.m_PricesBuy[mapped_condition];
-            m_MappedPricesWithFees[stattrak][rarity][wear].insertBack(skin.m_rID) = skin.m_PricesBuy[mapped_condition] * 0.87f - 0.01f;
+            m_Prices[stattrak][rarity][wear](skin.m_rID) = skin.m_PricesSell[condition];
+            m_MappedPrices[stattrak][rarity][wear](skin.m_rID) = skin.m_PricesBuy[mapped_condition];
+            m_MappedPricesWithFees[stattrak][rarity][wear](skin.m_rID) = skin.m_PricesBuy[mapped_condition] * 0.87f - 0.01f;
           }
 			  }
+
+        m_PricesCompressed[stattrak][rarity].resize(skinc*5);
+        for (const size_t id : ids) {
+          const Skin skin = m_DB->m_Skins[id];
+          for (SkinCondition condition : {BS, WW, FT, MW, FN}) {
+            m_PricesCompressed[stattrak][rarity](skin.m_rID * 5 + condition) = skin.m_PricesSell[condition + 5 * stattrak];
+          }
+        }
       }
+
 
 			for (int level = 0; level < g_nLevels * 2; level++) {
 				std::vector<Eigen::Triplet<float>> transformer_triplets;
@@ -83,20 +91,21 @@ namespace motek {
 	}
 
   float Calculator::ComputeGross(TradeUp &tradeup) const {
-		const float gross = ((m_Transformer[tradeup.rarity] * tradeup.mask) / tradeup.mask.dot(m_Factor[tradeup.rarity])).dot(m_MappedPricesWithFees[tradeup.stattrak][tradeup.rarity + 1][tradeup.average_wear]);
+		const float gross = ((m_Transformer[tradeup.rarity] * tradeup.mask_vector) / tradeup.mask_vector.dot(m_Factor[tradeup.rarity])).dot(m_MappedPricesWithFees[tradeup.stattrak][tradeup.rarity + 1][tradeup.average_wear]);
     return gross;
   }
   float Calculator::ComputeCost(TradeUp &tradeup) const {
-		const float cost = tradeup.mask.dot(m_Prices[tradeup.stattrak][tradeup.rarity][tradeup.average_wear]);
+    //MT_INFO("{}x{} - {}x{}", tradeup.mask_matrix.rows(), tradeup.mask_matrix.cols(), m_PriceMatrix[tradeup.stattrak][tradeup.rarity].rows(), m_PriceMatrix[tradeup.stattrak][tradeup.rarity].cols());
+    const float cost = tradeup.mask_big.dot(m_PricesCompressed[tradeup.stattrak][tradeup.rarity]);
     return cost;
   }
 
 	void Calculator::ComputeStatistical(TradeUp& tradeup) const {
-		const float factor = tradeup.mask.dot(m_Factor[tradeup.rarity]);
-		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity] * tradeup.mask) / factor;
+		const float factor = tradeup.mask_vector.dot(m_Factor[tradeup.rarity]);
+		const Eigen::SparseVector<float> probability = (m_Transformer[tradeup.rarity] * tradeup.mask_vector) / factor;
 
 		const float gross = probability.dot(m_MappedPricesWithFees[tradeup.stattrak][tradeup.rarity + 1][tradeup.average_wear]);
-		const float cost = tradeup.mask.dot(m_Prices[tradeup.stattrak][tradeup.rarity][tradeup.average_wear]);
+    const float cost = tradeup.mask_big.dot(m_PricesCompressed[tradeup.stattrak][tradeup.rarity]);
 
 		tradeup.probability = probability;
 		tradeup.cost = cost;
@@ -142,15 +151,16 @@ namespace motek {
 		ss << WearValueToFloat(tradeup.average_wear) << ",";
 		ss << tradeup.stattrak << ",";
 
-		const Eigen::VectorXf mask = tradeup.mask.toDense();
+		const Eigen::VectorXf mask = tradeup.mask_vector.toDense();
+    const Eigen::MatrixXf mask_big = tradeup.mask_big.toDense();
 		const Eigen::VectorXf probabilities = tradeup.probability.toDense();
 
-		for (int i = 0; i < ids_by_rarity.size(); i++) {
-			if (mask(i) > 0.0f) {
-				size_t id = ids_by_rarity[i];
-				const int amount = static_cast<int>(mask(i));
+		for (int i = 0; i < ids_by_rarity.size()*5; i++) {
+			if (mask_big(i) > 0.0f) {
+				size_t id = ids_by_rarity[i/5];
+				const int amount = static_cast<int>(mask_big(i));
 				for (int j = 0; j < amount; j++) {
-					const SkinCondition condition = ConditionFromFloat(tradeup.average_wear, tradeup.stattrak);
+					const SkinCondition condition = ConditionFromFloat(i%5, tradeup.stattrak);
 					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " ($" << skins[id].m_PricesSell[condition] << "),";
 				}
 			}
@@ -194,6 +204,7 @@ namespace motek {
     WearType wear = g_Levels[level/2];
     bool stattrak = level % 2;
     SkinCondition condition = ConditionFromFloat(wear, stattrak);
+    SkinCondition condition_non_st = ConditionFromFloat(wear, false);
 
 		std::vector<size_t> ids_by_rarity[SkinRarity::Contraband + 1];
 
@@ -209,8 +220,13 @@ namespace motek {
 			size_t nRSkins = calculator.m_DB->m_SkinIDsByRarity[rarity].size();
 			for (size_t id1 : ids_by_rarity[rarity]) {
 				size_t l_TradeUpCount = 0;
-				TradeUp tradeup(nRSkins, wear, stattrak, rarity);
-				tradeup.mask.coeffRef(id1) = 10;
+				TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
+
+        //MT_INFO("{} {}", id1, condition_non_st);
+
+				tradeup.mask_vector.coeffRef(id1) = 10;
+        tradeup.mask_big.coeffRef(id1*5+condition_non_st) = 10;
+
 				if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 				l_TradeUpCount++;
 
@@ -221,9 +237,11 @@ namespace motek {
 						const float A = p[0];
 						const float B = p[1];
 
-				    TradeUp tradeup(nRSkins, wear, stattrak, rarity);
-						tradeup.mask.coeffRef(id1) = A;
-						tradeup.mask.coeffRef(id2) = B;
+				    TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
+						tradeup.mask_vector.coeffRef(id1) = A;
+						tradeup.mask_vector.coeffRef(id2) = B;
+            tradeup.mask_big.coeffRef(id1*5+condition_non_st) = A;
+            tradeup.mask_big.coeffRef(id2*5+condition_non_st) = B;
 
 						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 						l_TradeUpCount++;
@@ -233,7 +251,7 @@ namespace motek {
 					for (size_t id3 : ids_by_rarity[rarity]) {
 						if (id3 == id2 || id3 == id1) continue;
 						for (const auto p : p3) {
-				      TradeUp tradeup(nRSkins, wear, stattrak, rarity);
+				      TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
 							const float A = p[0];
 							const float B = p[1];
 							const float C = p[2];
@@ -249,7 +267,7 @@ namespace motek {
 						for (size_t id4 : ids_by_rarity[rarity]) {
 							if (id4 == id3 || id4 == id2 || id4 == id1) continue;
 							for (const auto p : p4) {
-				        TradeUp tradeup(nRSkins, wear, stattrak, rarity);
+				        TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
 								const float A = p[0];
 								const float B = p[1];
 								const float C = p[2];
