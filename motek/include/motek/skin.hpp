@@ -6,14 +6,18 @@
 #include <iterator>
 
 namespace motek {
-  typedef float WearType;
-  constexpr WearType g_WearRangeMin = 0.0f;
-  constexpr WearType g_WearRangeMax = 1.0f;
+  typedef short WearType;
+  constexpr WearType g_WearRangeMin =    0;
+  constexpr WearType g_WearRangeMax = 1000;
   
   constexpr WearType g_WearRange1 = WearType(0.07 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
   constexpr WearType g_WearRange2 = WearType(0.15 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
   constexpr WearType g_WearRange3 = WearType(0.38 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
   constexpr WearType g_WearRange4 = WearType(0.45 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
+
+  constexpr double WearValueToFloat(WearType wear) {
+    return float(wear) / float(g_WearRangeMax);
+  }
 
 	enum WeaponClass {
 		Knives			= 1 << 8,
