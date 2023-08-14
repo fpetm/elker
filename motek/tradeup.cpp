@@ -23,6 +23,7 @@ namespace motek {
 	static bool g_Finished = false;
 	static std::mutex g_FinishedMutex;
 
+
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
 		MT_INFO("Building calculator..");
 		
@@ -161,7 +162,7 @@ namespace motek {
 				const int amount = static_cast<int>(mask_big(i));
 				for (int j = 0; j < amount; j++) {
 					const SkinCondition condition = ConditionFromFloat(i%5, tradeup.stattrak);
-					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " ($" << skins[id].m_PricesSell[condition] << "),";
+					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << ShortStringFromWeaponCondition(condition) <<  ") : $" << skins[id].m_PricesSell[condition] << "),";
 				}
 			}
 		}
@@ -220,71 +221,24 @@ namespace motek {
 			size_t nRSkins = calculator.m_DB->m_SkinIDsByRarity[rarity].size();
 			for (size_t id1 : ids_by_rarity[rarity]) {
 				size_t l_TradeUpCount = 0;
-				TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
-
-        //MT_INFO("{} {}", id1, condition_non_st);
-
-				tradeup.mask_vector.coeffRef(id1) = 10;
-        tradeup.mask_big.coeffRef(id1*5+condition_non_st) = 10;
-
-				if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-				l_TradeUpCount++;
-
 #ifdef L2
 				for (size_t id2 : ids_by_rarity[rarity]) {
-					if (id2 == id1) continue;
+#endif
 					for (const auto p : p2) {
 						const float A = p[0];
 						const float B = p[1];
 
 				    TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
-						tradeup.mask_vector.coeffRef(id1) = A;
-						tradeup.mask_vector.coeffRef(id2) = B;
-            tradeup.mask_big.coeffRef(id1*5+condition_non_st) = A;
-            tradeup.mask_big.coeffRef(id2*5+condition_non_st) = B;
+
+						tradeup.mask_vector.coeffRef(id1) += A;
+						tradeup.mask_vector.coeffRef(id2) += B;
+            tradeup.mask_big.coeffRef(id1*5+condition_non_st) += A;
+            tradeup.mask_big.coeffRef(id2*5+condition_non_st) += B;
 
 						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
 						l_TradeUpCount++;
 					}
-
-#ifdef L3
-					for (size_t id3 : ids_by_rarity[rarity]) {
-						if (id3 == id2 || id3 == id1) continue;
-						for (const auto p : p3) {
-				      TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
-							const float A = p[0];
-							const float B = p[1];
-							const float C = p[2];
-
-							tradeup.mask.insert(id1) = A;
-							tradeup.mask.insert(id2) = B;
-							tradeup.mask.insert(id3) = C;
-
-							if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-							l_TradeUpCount++;
-						}
-#ifdef L4
-						for (size_t id4 : ids_by_rarity[rarity]) {
-							if (id4 == id3 || id4 == id2 || id4 == id1) continue;
-							for (const auto p : p4) {
-				        TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
-								const float A = p[0];
-								const float B = p[1];
-								const float C = p[2];
-								const float D = p[3];
-
-								tradeup.mask.insert(id1) = A;
-								tradeup.mask.insert(id2) = B;
-								tradeup.mask.insert(id3) = C;
-								tradeup.mask.insert(id4) = D;
-
-								if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-								l_TradeUpCount++;
-							}
-						}
-#endif
-					}
-#endif
+#ifdef L2
 				}
 #endif
 				std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
