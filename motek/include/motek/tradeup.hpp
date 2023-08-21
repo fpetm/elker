@@ -4,13 +4,33 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
+#include "partitions.hpp"
+
 #include "log.hpp"
 
 namespace motek {
 	class TradeUp;
 
+  static constexpr size_t g_MaxDepth = 3;
 	static constexpr int g_nLevels = 5;
 	static constexpr std::array<WearType, g_nLevels> g_Levels = { 60, 110, 265, 415, 725};
+
+  constexpr std::vector<std::pair<WearType, std::array<WearType, 10>>> generate_wear_variations(int n) {
+    std::vector<std::array<int, 10>> partitions = create_partitions(n);
+    std::vector<std::pair<WearType, std::array<WearType, 10>>> values;
+
+    for (auto partition : partitions) {
+      WearType avg = 0;
+      for (WearType w : partition) {
+        avg += 0;
+      }
+      avg /= 10;
+
+//      values.push_back(std::pair<WearType, std::array<WearType, 10>>(avg, partition));
+    }
+
+    return {};
+  }
 
 	class Calculator {
 	public:
@@ -22,7 +42,7 @@ namespace motek {
 		void Bruteforce();
 
         bool Compute(TradeUp &tradeup) const {
-            return ComputeGross(tradeup) > ComputeCost(tradeup);
+            return double(ComputeGross(tradeup)) / double(ComputeCost(tradeup)) > 1;
         }
 		float ComputeGross(TradeUp &tradeup) const;
 		float ComputeCost(TradeUp &tradeup) const;

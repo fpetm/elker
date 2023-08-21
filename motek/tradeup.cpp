@@ -1,4 +1,5 @@
 ﻿#include <motek/tradeup.hpp>
+#include <signal.h>
 #include <iostream>
 #include <thread>
 #include <functional>
@@ -6,14 +7,11 @@
 #include <bitset>
 
 #include <motek/log.hpp>
+#include <motek/partitions.hpp>
+#include <motek/combinate.hpp>
 
 #include "base64.hpp"
-#include "partitions.hpp"
 
-// computation amount
-#define L2
-//#define L3
-//#define L4
 #define MT
 
 namespace motek {
@@ -22,7 +20,6 @@ namespace motek {
 
 	static bool g_Finished = false;
 	static std::mutex g_FinishedMutex;
-
 
 	Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
 		MT_INFO("Building calculator..");
@@ -111,7 +108,7 @@ namespace motek {
 		tradeup.probability = probability;
 		tradeup.cost = cost;
 		tradeup.grossreturn = gross;
-		tradeup.ev = tradeup.grossreturn - tradeup.cost;
+		tradeup.ev = tradeup.grossreturn;
 		tradeup.netreturn = tradeup.probability.dot(m_MappedPrices[tradeup.stattrak][tradeup.rarity+1][tradeup.average_wear]);
 
 		//const Eigen::VectorXf m2 = ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn) * (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() - tradeup.cost - tradeup.grossreturn)).matrix();
@@ -137,7 +134,7 @@ namespace motek {
 		const std::vector<size_t> hids_by_rarity = m_DB->m_SkinIDsByRarity[tradeup.rarity + 1];
 
 //		ss << tradeup.hash() << ",";
-		ss << "no for u ^^" << ",";
+		ss << "" << ",";
 		ss << tradeup.cost << ",";
 		ss << tradeup.ev << ",";
 		ss << tradeup.grossreturn - tradeup.cost << ",";
@@ -149,7 +146,7 @@ namespace motek {
 		ss << tradeup.stddev << ",";
 		ss << tradeup.vmr << ",";
 
-		ss << WearValueToFloat(tradeup.average_wear) << ",";
+		ss << tradeup.average_wear << ",";
 		ss << tradeup.stattrak << ",";
 
 		const Eigen::VectorXf mask = tradeup.mask_vector.toDense();
@@ -162,7 +159,7 @@ namespace motek {
 				const int amount = static_cast<int>(mask_big(i));
 				for (int j = 0; j < amount; j++) {
 					const SkinCondition condition = ConditionFromFloat(i%5, tradeup.stattrak);
-					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << ShortStringFromWeaponCondition(condition) <<  ") : $" << skins[id].m_PricesSell[condition] << "),";
+					ss << StringFromWeaponType(skins[id].m_WeaponType) << " | " << skins[id].m_Name << " (" << ShortStringFromWeaponCondition(condition) <<  ") : $" << skins[id].m_PricesSell[condition] << ",";
 				}
 			}
 		}
@@ -214,38 +211,35 @@ namespace motek {
 				if (calculator.m_DB->m_Skins[calculator.m_DB->m_SkinIDsByRarity[rarity][id]].m_Banned[condition] == false) {
 					ids_by_rarity[rarity].push_back(id);
 				}
-			}
+      }
 		}
 
 		for (SkinRarity rarity : {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec, SkinRarity::Restricted, SkinRarity::Classified}) {
 			size_t nRSkins = calculator.m_DB->m_SkinIDsByRarity[rarity].size();
-			for (size_t id1 : ids_by_rarity[rarity]) {
-				size_t l_TradeUpCount = 0;
-#ifdef L2
-				for (size_t id2 : ids_by_rarity[rarity]) {
-#endif
-					for (const auto p : p2) {
-						const float A = p[0];
-						const float B = p[1];
 
-				    TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
+      for (size_t depth = 0; depth < g_MaxDepth; depth++) {
+        size_t l_TradeUpCount = 0;
+        for (auto ids : combination(ids_by_rarity[rarity].size(), depth+1)) {
+          for (auto partition : ps[depth]) {
+            TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
+            
+            for (size_t i = 0; i < depth+1; i++) {
+              const size_t id = ids_by_rarity[rarity][ids[i]];
+              const size_t p = partition[i];
 
-						tradeup.mask_vector.coeffRef(id1) += A;
-						tradeup.mask_vector.coeffRef(id2) += B;
-            tradeup.mask_big.coeffRef(id1*5+condition_non_st) += A;
-            tradeup.mask_big.coeffRef(id2*5+condition_non_st) += B;
+              tradeup.mask_vector.insert(id) = p;
+              tradeup.mask_big.insert(id*5 +condition_non_st) = p;
+            }
 
-						if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
-						l_TradeUpCount++;
-					}
-#ifdef L2
-				}
-#endif
+            if (calculator.Compute(tradeup)) tradeups.push_back(tradeup);
+            l_TradeUpCount++;
+          }
+        }
 				std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
 				g_TradeUpCount += l_TradeUpCount;
-			}
-		}
-	}
+      }
+	  }
+  }
 
 	void Calculator::Bruteforce() {
 		MT_INFO("Bruteforcing...");
@@ -255,12 +249,12 @@ namespace motek {
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 #ifdef MT
 		for (int level = 0; level < g_nLevels * 2; level++) {
-			threads[level] = std::thread(BruteforceCondition, std::cref(*this), level, std::ref(tradeups[level]));
+      threads[level] = std::thread(BruteforceCondition, std::cref(*this), level, std::ref(tradeups[level]));
 		}
 
 		reporter = std::thread(ReportAmount);
 		for (int level = 0; level < g_nLevels * 2; level++) {
-			threads[level].join();
+      threads[level].join();
 		}
 #else
 		reporter = std::thread(ReportAmount);
@@ -294,8 +288,8 @@ namespace motek {
 		}
 		MT_INFO("Succesful bruteforcing, serched {}, found {} profitable tradeups in {} seconds ({:.2f} tradeups/second)!", g_TradeUpCount, tupt, time, g_TradeUpCount / time);
 
-		std::sort(all_tradeups.begin(), all_tradeups.end(),
-			[](TradeUp t1, TradeUp t2) {return ((t1.grossreturn / t1.cost) < (t2.grossreturn / t2.cost)); });
+////std::sort(all_tradeups.begin(), all_tradeups.end(),
+////	[](TradeUp t1, TradeUp t2) {return ((t1.grossreturn / t1.cost) < (t2.grossreturn / t2.cost)); });
 
 		std::ofstream of("out.csv");
 		of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,Variance,Standard Deviation,VMR,Wear,StatTrak,";
@@ -303,8 +297,10 @@ namespace motek {
 		for (int i = 0; i < 20; i++) of << "Result" << i + 1 << "," << "Price" << i + 1 << "," << "Chance" << i + 1 << ",";
 		of << "\n";
 		MT_INFO("Exporting...");
+    int n = 0;
 		for (TradeUp t : all_tradeups) {
 			of << ExportTradeUp(t);
+      if (n++ > 100) break;
 		}
 		of.close();
 		MT_INFO("Sucessfully exported all tradeups");

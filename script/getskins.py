@@ -110,8 +110,9 @@ SKINDATA_PATH = './resources/skindata.csv'
 
 def main():
     def translate(dictionary, name):
-        if name in dictionary:
-            return dictionary[name]
+        for entry, value in dictionary.items():
+            if name.upper() == entry.upper():
+                return value
         return None
     items_game = load(ITEM_GAME_PATH)
     csgo_english = load(CSGO_ENGLISH_PATH)
@@ -242,6 +243,9 @@ def main():
             collection = skin['collection']['description']
             wear_min = skin['paint_kit']['wear_min']
             wear_max = skin['paint_kit']['wear_max']
+
+##          if 'Dust' in collection:
+##              print(skin)
 
             writer.writerow([tag, weapon_type, rarity, collection, wear_min, wear_max])
 
