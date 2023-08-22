@@ -264,8 +264,8 @@ namespace motek {
           }
 			i++;
         }
-				std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
-				g_TradeUpCount += l_TradeUpCount;
+				//std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
+				//g_TradeUpCount += l_TradeUpCount;
       }
 	  }
   }

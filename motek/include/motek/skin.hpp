@@ -7,7 +7,7 @@
 
 namespace motek {
   typedef short WearType;
-  constexpr WearType g_WearRangeMin =    0;
+  constexpr WearType g_WearRangeMin =     0;
   constexpr WearType g_WearRangeMax = 1000;
   
   constexpr WearType g_WearRange1 = WearType(0.07 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);

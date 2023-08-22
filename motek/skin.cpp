@@ -269,6 +269,6 @@ namespace motek {
             }
         }
 
-        MT_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(), m_Collections.size());
+            MT_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(), m_Collections.size());
     }
 }

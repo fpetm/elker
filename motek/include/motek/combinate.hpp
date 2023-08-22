@@ -17,7 +17,7 @@ namespace motek {
   }
 
   constexpr std::vector<std::vector<size_t>> combination(size_t n, size_t s) {
-//    std::cout << n << " : " << s << "\n";
+    //std::cout << n << " : " << s << "\n";
     if (n < s || n < 0) return {};
     std::vector<bool> mask(n);
     std::fill(mask.end() - s, mask.end(), true);
@@ -25,15 +25,23 @@ namespace motek {
     std::vector<std::vector<size_t>> r(nCr(n, s));
     size_t k = 0;
     do {
-      std::vector<size_t> &v = r[k++];
-      v.resize(s);
+      r[k].resize(s);
       size_t j = 0;
       for (size_t i = 0; i < n; i++) {
         if (mask[i])
-          v[j++] = i;
+            r[k][j++] = i;
       }
+      k++;
     } while (std::next_permutation(mask.begin(), mask.end()));
 
     return r;
   }
+
+  template <typename T>
+  constexpr std::vector<std::vector<T>> solve(T a, T b, T s, std::vector<T> s1, std::vector<T> s2) {
+      for (T i = 0; i < std::pow(s, a * b); i++) {
+          
+      }
+      return {};
+  };
 }

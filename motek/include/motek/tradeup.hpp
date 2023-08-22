@@ -42,7 +42,8 @@ namespace motek {
 		void Bruteforce();
 
         bool Compute(TradeUp &tradeup) const {
-            return double(ComputeGross(tradeup)) / double(ComputeCost(tradeup)) > 1;
+			return ComputeGross(tradeup) > ComputeCost(tradeup);
+           // return std::abs(double(ComputeGross(tradeup)) - double(ComputeCost(tradeup)) - 2.9121f) < 0.01f;
         }
 		float ComputeGross(TradeUp &tradeup) const;
 		float ComputeCost(TradeUp &tradeup) const;
