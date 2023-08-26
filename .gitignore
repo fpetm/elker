@@ -8,3 +8,4 @@ compile_commands.json
 resources/csgostash.csv
 script/__pycache__/
 .env
+.cache

@@ -121,8 +121,8 @@ macro(elker_local_options)
   endif()
 
   if(elker_ENABLE_CACHE)
-    include(cmake/Cache.cmake)
-    elker_enable_cache()
+    #include(cmake/Cache.cmake)
+    #elker_enable_cache()
   endif()
 
   include(cmake/StaticAnalyzers.cmake)
