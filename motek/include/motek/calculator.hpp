@@ -3,31 +3,26 @@
 #include "tradeup.hpp"
 
 namespace motek {
-static constexpr size_t g_MaxDepth = 2;
-static constexpr int g_nLevels = 5;
+using wear_config_t = std::unordered_map<SkinCondition, size_t>;
+using wear_configs_t = std::unordered_map<wear_t, wear_config_t>;
 
-typedef std::unordered_map<SkinCondition, size_t> wear_config_t;
-typedef std::unordered_map<WearType, wear_config_t> wear_configs_t;
 wear_configs_t
-generate_wear_variations(const std::vector<std::vector<WearType>> &wear_tuples,
+generate_wear_variations(const std::vector<std::vector<wear_t>> &wear_tuples,
                          bool stattrak);
 
 class Calculator {
 public:
-  Calculator(std::shared_ptr<SkinDB> db);
-  std::shared_ptr<SkinDB> getDB() const { return m_DB; }
+  explicit Calculator(std::shared_ptr<SkinDB> database);
+  [[nodiscard]] std::shared_ptr<SkinDB> getDB() const { return m_DB; }
 
-  std::string ExportTradeUp(TradeUp &tradeup) const;
+  [[nodiscard]] std::string ExportTradeUp(TradeUp &tradeup) const;
 
-  void Bruteforce(const std::vector<std::vector<WearType>> &wear_tuples);
+  void Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
+                  size_t max_depth) const;
 
-  bool Compute(TradeUp &tradeup) const {
-    return ComputeGross(tradeup) > ComputeCost(tradeup);
-    // return std::abs(double(ComputeGross(tradeup)) -
-    // double(ComputeCost(tradeup)) - 2.9121f) < 0.01f;
-  }
-  float ComputeGross(TradeUp &tradeup) const;
-  float ComputeCost(TradeUp &tradeup) const;
+  [[nodiscard]] float ComputeGross(TradeUp &tradeup) const;
+  [[nodiscard]] float ComputeCost(TradeUp &tradeup) const;
+
   void ComputeStatistical(TradeUp &tradeup) const;
 
   std::shared_ptr<SkinDB> m_DB;

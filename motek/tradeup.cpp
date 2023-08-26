@@ -1,20 +1,33 @@
 ﻿#include <motek/tradeup.hpp>
 
 namespace motek {
-TradeUp::TradeUp(size_t n, WearType avg_wear, bool st, SkinRarity r,
-                 SkinCondition cond_no_st)
-    : nSkins(n), average_wear(avg_wear), stattrak(st), rarity(r),
-      condition_no_stattrak(cond_no_st), computed(false) {
-  mask_vector.resize(nSkins);
-  mask_big.resize(nSkins * 5);
-  cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
+TradeUp::TradeUp(size_t nskins, wear_t avg_wear, bool stattrak,
+                 SkinRarity rarity)
+    : m_Computed(false), m_NSkins(nskins), m_AverageWear(avg_wear),
+      m_StatTrak(stattrak), m_Rarity(rarity) {
+  m_Mask.resize(m_NSkins);
+  m_MaskBig.resize(m_NSkins * 5);
+  m_Mask.reserve(10);
+  m_MaskBig.reserve(10);
 
   Clear();
 }
 
 void TradeUp::Clear() {
-  computed = false;
-  cost = grossreturn = netreturn = variance = stddev = vmr = profitchance = 0;
-  // mask.setZero();
+  m_Computed = false;
+  m_Cost = m_GrossReturn = m_NetReturn = 0;
 }
+
+void TradeUp::SetPrices(float cost, float grossreturn, float netreturn) {
+  m_Cost = cost;
+  m_GrossReturn = grossreturn;
+  m_NetReturn = netreturn;
+}
+
+void TradeUp::SetAmount(int id, int amount) { m_Mask.insert(id) = amount; }
+void TradeUp::SetAmountCondition(int id, int amount,
+                                 SkinCondition condition_no_stattrak) {
+  m_MaskBig.insert(id * g_ConditionCount + condition_no_stattrak) = amount;
+}
+
 } // namespace motek

@@ -249,8 +249,8 @@ std::string ShortStringFromWeaponCondition(SkinCondition condition) {
   }
 }
 
-SkinCondition ConditionFromFloat(WearType wear, bool st) {
-  if (st) {
+SkinCondition ConditionFromFloat(wear_t wear, bool stattrak) {
+  if (stattrak) {
     if (wear >= g_WearRangeMin && wear <= g_WearRange1)
       return SkinCondition::FN_ST;
     else if (wear > g_WearRange1 && wear <= g_WearRange2)
@@ -276,11 +276,11 @@ SkinCondition ConditionFromFloat(WearType wear, bool st) {
   return SkinCondition::Max;
 }
 
-SkinCondition MapCondition(const Skin &skin, WearType wear, bool stattrak) {
-  const WearType newfloat =
-      WearType((skin.wear_max - skin.wear_min) *
-                   (wear / double(g_WearRangeMax - g_WearRangeMin)) +
-               skin.wear_min);
+SkinCondition MapCondition(const Skin &skin, wear_t wear, bool stattrak) {
+  const auto newfloat =
+      static_cast<wear_t>((skin.wear_max - skin.wear_min) *
+                              (wear / double(g_WearRangeMax - g_WearRangeMin)) +
+                          skin.wear_min);
   return ConditionFromFloat(newfloat, stattrak);
 }
 
@@ -357,9 +357,10 @@ SkinDB::SkinDB(std::string skinpath) {
     for (SkinCollection &coll : m_Collections) {
       if (coll.m_Name == collection) {
         coll.AddSkin(Skin(name, price_sell, price_buy, rarity, type,
-                          WearType(wear_min * g_WearRangeMax),
-                          WearType(wear_max * g_WearRangeMax), m_Skins.size(),
-                          coll.m_ID, m_SkinIDsByRarity[rarity].size()));
+                          static_cast<wear_t>(wear_min * g_WearRangeMax),
+                          static_cast<wear_t>(wear_max * g_WearRangeMax),
+                          m_Skins.size(), coll.m_ID,
+                          m_SkinIDsByRarity[rarity].size()));
         m_SkinIDsByRarity[rarity].push_back(m_Skins.size());
         m_Skins.push_back(coll.LastSkin());
       }

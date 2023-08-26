@@ -6,20 +6,26 @@
 #include <vector>
 
 namespace motek {
-typedef short WearType;
-constexpr WearType g_WearRangeMin = 0;
-constexpr WearType g_WearRangeMax = 1000;
+constexpr float g_ValveTaxFlat = 0.01F;
+constexpr float g_ValveTaxPercentage = 0.87F;
+constexpr inline float ValveTax(float price) {
+  return price * g_ValveTaxPercentage - g_ValveTaxFlat;
+}
+using wear_t = short;
+constexpr wear_t g_WearRangeMin = 0;
+constexpr wear_t g_WearRangeMax = 1000;
+constexpr int g_ConditionCount = 5;
 
-constexpr WearType g_WearRange1 =
-    WearType(0.07 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
-constexpr WearType g_WearRange2 =
-    WearType(0.15 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
-constexpr WearType g_WearRange3 =
-    WearType(0.38 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
-constexpr WearType g_WearRange4 =
-    WearType(0.45 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
+constexpr wear_t g_WearRange1 = static_cast<wear_t>(
+    0.07 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
+constexpr wear_t g_WearRange2 = static_cast<wear_t>(
+    0.15 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
+constexpr wear_t g_WearRange3 = static_cast<wear_t>(
+    0.38 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
+constexpr wear_t g_WearRange4 = static_cast<wear_t>(
+    0.45 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
 
-constexpr double WearValueToFloat(WearType wear) {
+constexpr double WearValueToFloat(wear_t wear) {
   return float(wear) / float(g_WearRangeMax);
 }
 
@@ -106,8 +112,8 @@ class Skin {
 public:
   Skin(std::string name, std::array<float, SkinCondition::Max> prices_sell,
        std::array<float, SkinCondition::Max> prices_buy, SkinRarity rarity,
-       WeaponType weapontype, WearType wmin, WearType wmax, size_t id,
-       size_t cid, size_t rid)
+       WeaponType weapontype, wear_t wmin, wear_t wmax, size_t id, size_t cid,
+       size_t rid)
       : m_Name(name), m_PricesSell(prices_sell), m_PricesBuy(prices_buy),
         m_Rarity(rarity), m_WeaponType(weapontype), wear_min(wmin),
         wear_max(wmax), m_ID(id), m_CollectionID(cid), m_rID(rid) {
@@ -120,7 +126,7 @@ public:
   std::array<float, SkinCondition::Max> m_PricesBuy;
   SkinRarity m_Rarity;
   WeaponType m_WeaponType;
-  WearType wear_min, wear_max;
+  wear_t wear_min, wear_max;
   size_t m_ID, m_CollectionID, m_rID;
   std::array<bool, SkinCondition::Max> m_Banned;
 };
@@ -179,6 +185,6 @@ WeaponType WeaponTypeFromString(std::string s);
 std::string StringFromWeaponType(WeaponType type);
 std::string StringFromWeaponCondition(SkinCondition condition);
 std::string ShortStringFromWeaponCondition(SkinCondition condition);
-SkinCondition ConditionFromFloat(WearType wear, bool st);
-SkinCondition MapCondition(const Skin &skin, WearType wear, bool stattrak);
+SkinCondition ConditionFromFloat(wear_t wear, bool st);
+SkinCondition MapCondition(const Skin &skin, wear_t wear, bool stattrak);
 } // namespace motek

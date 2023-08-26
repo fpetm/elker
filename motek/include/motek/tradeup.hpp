@@ -15,26 +15,28 @@
 namespace motek {
 class TradeUp {
 public:
-  TradeUp(size_t n, WearType avg_wear, bool st, SkinRarity r,
-          SkinCondition cond_no_st);
+  TradeUp(size_t nskins, wear_t avg_wear, bool stattrak, SkinRarity rarity);
+  void SetPrices(float cost, float grossreturn, float netreturn);
+  void SetAmount(int id, int amount);
+  void SetAmountCondition(int id, int amount,
+                          SkinCondition condition_no_stattrak);
 
   void Clear();
 
-public:
-  size_t nSkins;
-  WearType average_wear;
-  bool stattrak;
-  SkinRarity rarity;
-  SkinCondition condition_no_stattrak;
+  bool m_Computed;
 
-  bool computed;
+  size_t m_NSkins;
+  wear_t m_AverageWear;
+  bool m_StatTrak;
+  SkinRarity m_Rarity;
+  //  SkinCondition m_ConditionNoStattrak;
 
-  float cost, grossreturn, netreturn;
-  float variance, stddev, vmr, profitchance, ev;
+  float m_Cost, m_GrossReturn, m_NetReturn;
+  float m_ProfitChance;
 
-  Eigen::SparseVector<float> probability;
+  Eigen::SparseVector<float> m_Probability;
 
-  Eigen::SparseVector<float> mask_vector;
-  Eigen::SparseVector<float> mask_big;
+  Eigen::SparseVector<float> m_Mask;
+  Eigen::SparseVector<float> m_MaskBig;
 };
 } // namespace motek

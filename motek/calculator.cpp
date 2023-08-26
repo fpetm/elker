@@ -1,4 +1,3 @@
-#include <bitset>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -38,11 +37,12 @@ inline uint64_t variations_key(std::array<uint8_t, 8> param1,
 }
 
 wear_configs_t
-generate_wear_variations(const std::vector<std::vector<WearType>> &wear_tuples,
+generate_wear_variations(const std::vector<std::vector<wear_t>> &wear_tuples,
                          bool stattrak) {
+  // TODO rewrite this w/ compositions instead of partitions
   wear_configs_t values;
 
-  for (std::vector<WearType> wears : wear_tuples) {
+  for (std::vector<wear_t> wears : wear_tuples) {
     std::vector<std::array<int, 10>> partitions =
         create_partitions(wears.size());
     for (size_t i = 0; i < wears.size(); i++) {
@@ -54,11 +54,11 @@ generate_wear_variations(const std::vector<std::vector<WearType>> &wear_tuples,
     }
 
     for (auto partition : partitions) {
-      WearType avg = 0;
+      wear_t avg = 0;
       wear_config_t map;
 
       for (size_t i = 0; i < 10; i++) {
-        WearType w = wears[partition[i]];
+        wear_t w = wears[partition[i]];
         map[ConditionFromFloat(w, stattrak)]++;
 
         avg += w;
@@ -74,7 +74,7 @@ generate_wear_variations(const std::vector<std::vector<WearType>> &wear_tuples,
   return values;
 }
 
-Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
+Calculator::Calculator(std::shared_ptr<SkinDB> database) : m_DB(database) {
   MT_INFO("Building calculator..");
 
   for (SkinRarity rarity :
@@ -86,7 +86,7 @@ Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
     const size_t higherc = hids.size();
 
     for (bool stattrak : {false, true}) {
-      for (WearType wear = g_WearRangeMin; wear < g_WearRangeMax; wear++) {
+      for (wear_t wear = g_WearRangeMin; wear < g_WearRangeMax; wear++) {
         m_Prices[stattrak][rarity][wear].resize(skinc);
         m_MappedPrices[stattrak][rarity][wear].resize(skinc);
         m_MappedPricesWithFees[stattrak][rarity][wear].resize(skinc);
@@ -99,7 +99,7 @@ Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
     if (rarity == SkinRarity::Covert)
       continue;
     for (bool stattrak : {false, true}) {
-      for (WearType wear = g_WearRangeMin; wear < g_WearRangeMax; wear++) {
+      for (wear_t wear = g_WearRangeMin; wear < g_WearRangeMax; wear++) {
         for (const size_t id : ids) {
           const Skin skin = m_DB->m_Skins[id];
           SkinCondition condition = ConditionFromFloat(wear, stattrak);
@@ -110,11 +110,11 @@ Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
           m_MappedPrices[stattrak][rarity][wear](skin.m_rID) =
               skin.m_PricesBuy[mapped_condition];
           m_MappedPricesWithFees[stattrak][rarity][wear](skin.m_rID) =
-              skin.m_PricesBuy[mapped_condition] * 0.87f - 0.01f;
+              ValveTax(skin.m_PricesBuy[mapped_condition]);
         }
       }
 
-      m_PricesCompressed[stattrak][rarity].resize(skinc * 5);
+      m_PricesCompressed[stattrak][rarity].resize(skinc * g_ConditionCount);
       for (const size_t id : ids) {
         const Skin skin = m_DB->m_Skins[id];
         for (SkinCondition condition : {BS, WW, FT, MW, FN}) {
@@ -136,63 +136,45 @@ Calculator::Calculator(std::shared_ptr<SkinDB> db) : m_DB(db) {
             case FN:
               c = FN_ST;
               break;
-            case BS_ST:
-              c = BS_ST;
-              break;
-            case WW_ST:
-              c = WW_ST;
-              break;
-            case FT_ST:
-              c = FT_ST;
-              break;
-            case MW_ST:
-              c = MW_ST;
-              break;
-            case FN_ST:
-              c = FN_ST;
-              break;
             default:
-              c = BS_ST;
               break;
             }
           }
-          m_PricesCompressed[stattrak][rarity](skin.m_rID * 5 + condition) =
-              skin.m_PricesSell[c];
+          m_PricesCompressed[stattrak][rarity](
+              skin.m_rID * g_ConditionCount + condition) = skin.m_PricesSell[c];
         }
       }
     }
 
-    for (int level = 0; level < g_nLevels * 2; level++) {
-      std::vector<Eigen::Triplet<float>> transformer_triplets;
+    std::vector<Eigen::Triplet<float>> transformer_triplets;
 
-      auto &factor = m_Factor[rarity];
-      auto &transformer = m_Transformer[rarity];
+    auto &factor = m_Factor[rarity];
+    auto &transformer = m_Transformer[rarity];
 
-      for (const SkinCollection &collection : db->m_Collections) {
-        float hc = collection.m_SkinsByRarity[rarity + 1].size();
+    for (const SkinCollection &collection : m_DB->m_Collections) {
+      float hc = collection.m_SkinsByRarity[rarity + 1].size();
 
-        for (const Skin &first : collection.m_SkinsByRarity[rarity]) {
-          factor.insertBack(first.m_rID) = hc;
-          for (const Skin &second : collection.m_SkinsByRarity[rarity + 1]) {
-            transformer_triplets.push_back({static_cast<int>(second.m_rID),
-                                            static_cast<int>(first.m_rID), 1});
-          }
+      for (const Skin &first : collection.m_SkinsByRarity[rarity]) {
+        factor.insertBack(first.m_rID) = hc;
+        for (const Skin &second : collection.m_SkinsByRarity[rarity + 1]) {
+          transformer_triplets.push_back({static_cast<int>(second.m_rID),
+                                          static_cast<int>(first.m_rID), 1});
         }
       }
-      transformer.setFromTriplets(transformer_triplets.begin(),
-                                  transformer_triplets.end());
-      transformer.makeCompressed();
     }
+    transformer.setFromTriplets(transformer_triplets.begin(),
+                                transformer_triplets.end());
+    transformer.makeCompressed();
   }
   MT_INFO("Built calculator");
 }
 
 float Calculator::ComputeGross(TradeUp &tradeup) const {
   const float gross =
-      ((m_Transformer[tradeup.rarity] * tradeup.mask_vector) /
-       tradeup.mask_vector.dot(m_Factor[tradeup.rarity]))
-          .dot(m_MappedPricesWithFees[tradeup.stattrak][tradeup.rarity + 1]
-                                     [tradeup.average_wear]);
+      ((m_Transformer[tradeup.m_Rarity] * tradeup.m_Mask) /
+       tradeup.m_Mask.dot(m_Factor[tradeup.m_Rarity]))
+          .dot(m_MappedPricesWithFees[tradeup.m_StatTrak][tradeup.m_Rarity + 1]
+                                     [tradeup.m_AverageWear]);
   return gross;
 }
 float Calculator::ComputeCost(TradeUp &tradeup) const {
@@ -200,46 +182,47 @@ float Calculator::ComputeCost(TradeUp &tradeup) const {
   // tradeup.mask_matrix.cols(),
   // m_PriceMatrix[tradeup.stattrak][tradeup.rarity].rows(),
   // m_PriceMatrix[tradeup.stattrak][tradeup.rarity].cols());
-  const float cost = tradeup.mask_big.dot(
-      m_PricesCompressed[tradeup.stattrak][tradeup.rarity]);
+  const float cost = tradeup.m_MaskBig.dot(
+      m_PricesCompressed[tradeup.m_StatTrak][tradeup.m_Rarity]);
   return cost;
 }
 
 void Calculator::ComputeStatistical(TradeUp &tradeup) const {
-  const float factor = tradeup.mask_vector.dot(m_Factor[tradeup.rarity]);
+  const float factor = tradeup.m_Mask.dot(m_Factor[tradeup.m_Rarity]);
   const Eigen::SparseVector<float> probability =
-      (m_Transformer[tradeup.rarity] * tradeup.mask_vector) / factor;
+      (m_Transformer[tradeup.m_Rarity] * tradeup.m_Mask) / factor;
 
   const float gross = probability.dot(
-      m_MappedPricesWithFees[tradeup.stattrak][tradeup.rarity + 1]
-                            [tradeup.average_wear]);
-  const float cost = tradeup.mask_big.dot(
-      m_PricesCompressed[tradeup.stattrak][tradeup.rarity]);
+      m_MappedPricesWithFees[tradeup.m_StatTrak][tradeup.m_Rarity + 1]
+                            [tradeup.m_AverageWear]);
+  const float cost = tradeup.m_MaskBig.dot(
+      m_PricesCompressed[tradeup.m_StatTrak][tradeup.m_Rarity]);
 
-  tradeup.probability = probability;
-  tradeup.cost = cost;
-  tradeup.grossreturn = gross;
-  tradeup.ev = tradeup.grossreturn;
-  tradeup.netreturn = tradeup.probability.dot(
-      m_MappedPrices[tradeup.stattrak][tradeup.rarity + 1]
-                    [tradeup.average_wear]);
+  tradeup.m_Probability = probability;
+  tradeup.m_Cost = cost;
+  tradeup.m_GrossReturn = gross;
+  tradeup.m_NetReturn =
+      probability.dot(m_MappedPrices[tradeup.m_StatTrak][tradeup.m_Rarity + 1]
+                                    [tradeup.m_AverageWear]);
 
-  // const Eigen::VectorXf m2 =
-  // ((m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() -
-  // tradeup.cost - tradeup.grossreturn) *
-  // (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() -
-  // tradeup.cost - tradeup.grossreturn)).matrix(); tradeup.variance =
-  // tradeup.probability.dot(m2); tradeup.stddev = std::sqrt(tradeup.variance);
-  // tradeup.vmr = tradeup.variance / tradeup.grossreturn;
-  // tradeup.profitchance =
-  // (m_MappedPricesWithFees[tradeup.rarity][tradeup.level].toDense().array() -
-  // tradeup.cost).array().cwiseSign().cwiseMax(0).matrix().dot(tradeup.probability.toDense());
+  tradeup.m_ProfitChance =
+      (m_MappedPricesWithFees[tradeup.m_StatTrak][tradeup.m_Rarity + 1]
+                             [tradeup.m_AverageWear]
+                                 .array() -
+       tradeup.m_Cost)
+          .array()
+          .cwiseSign()
+          .cwiseMax(0)
+          .matrix()
+          .dot(probability.toDense());
+  tradeup.m_Computed = true;
 }
 
 bool ValidateTradeUp(const TradeUp &tradeup) {
-  if (tradeup.computed == false)
+  return true;
+  if (tradeup.m_Computed == false)
     return false;
-  if (tradeup.cost <= 0)
+  if (tradeup.m_Cost <= 0)
     return false;
 
   return true;
@@ -250,77 +233,73 @@ std::string Calculator::ExportTradeUp(TradeUp &tradeup) const {
   std::stringstream ss;
   const std::vector<Skin> skins = m_DB->m_Skins;
   const std::vector<size_t> ids_by_rarity =
-      m_DB->m_SkinIDsByRarity[tradeup.rarity];
+      m_DB->m_SkinIDsByRarity[tradeup.m_Rarity];
   const std::vector<size_t> hids_by_rarity =
-      m_DB->m_SkinIDsByRarity[tradeup.rarity + 1];
+      m_DB->m_SkinIDsByRarity[tradeup.m_Rarity + 1];
 
   //		ss << tradeup.hash() << ",";
   ss << ""
      << ",";
-  ss << tradeup.cost << ",";
-  ss << tradeup.ev << ",";
-  ss << tradeup.grossreturn - tradeup.cost << ",";
-  ss << (tradeup.grossreturn / tradeup.cost - 1.0f) * 100.0f << ",";
-  ss << tradeup.netreturn - tradeup.cost << ",";
-  ss << (tradeup.netreturn / tradeup.cost - 1.0f) * 100.0f << ",";
-  ss << tradeup.profitchance * 100.0f << ",";
-  ss << tradeup.variance << ",";
-  ss << tradeup.stddev << ",";
-  ss << tradeup.vmr << ",";
+  ss << tradeup.m_Cost << ",";
+  ss << tradeup.m_GrossReturn << ",";
+  ss << tradeup.m_GrossReturn - tradeup.m_Cost << ",";
+  ss << (tradeup.m_GrossReturn / tradeup.m_Cost - 1.0f) * 100.0f << ",";
+  ss << tradeup.m_NetReturn - tradeup.m_Cost << ",";
+  ss << (tradeup.m_NetReturn / tradeup.m_Cost - 1.0f) * 100.0f << ",";
+  ss << tradeup.m_ProfitChance * 100.0f << ",";
 
-  ss << tradeup.average_wear << ",";
-  ss << tradeup.stattrak << ",";
+  ss << tradeup.m_AverageWear << ",";
+  ss << tradeup.m_StatTrak << ",";
 
-  const Eigen::VectorXf mask = tradeup.mask_vector.toDense();
-  const Eigen::MatrixXf mask_big = tradeup.mask_big.toDense();
-  const Eigen::VectorXf probabilities = tradeup.probability.toDense();
+  const Eigen::VectorXf mask = tradeup.m_Mask.toDense();
+  const Eigen::MatrixXf mask_big = tradeup.m_MaskBig.toDense();
+  const Eigen::VectorXf probabilities = tradeup.m_Probability.toDense();
 
-  for (size_t i = 0; i < ids_by_rarity.size() * 5; i++) {
-    if (mask_big(i) > 0.0f) {
-      size_t id = ids_by_rarity[i / 5];
-      const int amount = static_cast<int>(mask_big(i));
-      for (int j = 0; j < amount; j++) {
-        SkinCondition condition = SkinCondition(i % 5);
-        if (tradeup.stattrak) {
-          switch (condition) {
-          case BS:
-            condition = BS_ST;
-            break;
-          case WW:
-            condition = WW_ST;
-            break;
-          case FT:
-            condition = FT_ST;
-            break;
-          case MW:
-            condition = MW_ST;
-            break;
-          case FN:
-            condition = FN_ST;
-            break;
-          }
+  for (Eigen::SparseVector<float>::InnerIterator it(tradeup.m_MaskBig); it;
+       ++it) {
+    int id = it.index() / 5;
+    const int amount = static_cast<int>(it.value());
+    for (int j = 0; j < amount; j++) {
+      SkinCondition condition = SkinCondition(it.index() % g_ConditionCount);
+      if (tradeup.m_StatTrak) {
+        switch (condition) {
+        case BS:
+          condition = BS_ST;
+          break;
+        case WW:
+          condition = WW_ST;
+          break;
+        case FT:
+          condition = FT_ST;
+          break;
+        case MW:
+          condition = MW_ST;
+          break;
+        case FN:
+          condition = FN_ST;
+          break;
+        default:
+          break;
         }
-        ss << StringFromWeaponType(skins[id].m_WeaponType) << " | "
-           << skins[id].m_Name << " ("
-           << ShortStringFromWeaponCondition(condition) << ") : $"
-           << skins[id].m_PricesSell[condition] << ",";
       }
-    };
-  }
-
-  for (size_t i = 0; i < hids_by_rarity.size(); i++) {
-    if (probabilities(i) > 0.0f) {
-      size_t id = hids_by_rarity[i];
-      const SkinCondition condition =
-          MapCondition(skins[id], tradeup.average_wear, tradeup.stattrak);
       ss << StringFromWeaponType(skins[id].m_WeaponType) << " | "
          << skins[id].m_Name << " ("
-         << ShortStringFromWeaponCondition(condition) << ")"
-         << ",";
-      ss << std::to_string(skins[id].m_PricesBuy[condition] * 0.87f - 0.01f)
-         << ",";
-      ss << std::to_string(probabilities(i)) << ", ";
+         << ShortStringFromWeaponCondition(condition) << ") : $"
+         << skins[id].m_PricesSell[condition] << ",";
     }
+  }
+
+  for (Eigen::SparseVector<float>::InnerIterator it(tradeup.m_MaskBig); it;
+       ++it) {
+    size_t id = it.index();
+    const SkinCondition condition =
+        MapCondition(skins[id], tradeup.m_AverageWear, tradeup.m_StatTrak);
+    ss << StringFromWeaponType(skins[id].m_WeaponType) << " | "
+       << skins[id].m_Name << " (" << ShortStringFromWeaponCondition(condition)
+       << ")"
+       << ",";
+    ss << std::to_string(ValveTax(skins[id].m_PricesBuy[condition])) << ",";
+    ss << std::to_string(it.value()) << ", ";
   }
 
   ss << "\n";
@@ -349,10 +328,10 @@ void ReportAmount() {
   }
 }
 
-void BruteforceCondition(const Calculator &calculator,
-                         std::pair<WearType, wear_config_t> kv, bool stattrak,
+void BruteforceCondition(const Calculator &calculator, size_t max_depth,
+                         std::pair<wear_t, wear_config_t> kv, bool stattrak,
                          std::vector<TradeUp> &tradeups) {
-  WearType wear = kv.first;
+  wear_t wear = kv.first;
   wear_config_t wear_config = kv.second;
 
   std::array<uint8_t, 8> array1 = {};
@@ -360,19 +339,19 @@ void BruteforceCondition(const Calculator &calculator,
   SkinCondition condition = ConditionFromFloat(wear, stattrak);
   SkinCondition condition_non_st = ConditionFromFloat(wear, false);
   std::cout << kv.first << " : ";
-  size_t i = 0;
-  for (auto k : wear_config) {
-    //      std::cout << ShortStringFromWeaponCondition(k.first) << " : " <<
-    //      k.second << " ; ";
-    array1[i] = k.second;
-    std::cout << int(array1[i]) << " , ";
-    i++;
+  {
+    size_t i = 0;
+    for (auto k : wear_config) {
+      //      std::cout << ShortStringFromWeaponCondition(k.first) << " : " <<
+      //      k.second << " ; ";
+      array1[i] = k.second;
+      std::cout << int(array1[i]) << " , ";
+      i++;
+    }
   }
   EK_INFO("{:16X}", variations_key(array1, std::array<uint8_t, 8>{}));
   std::cout << "\n";
   return;
-
-  tradeups.reserve(1024);
 
   std::vector<size_t> ids_by_rarity[SkinRarity::Contraband + 1];
 
@@ -394,21 +373,21 @@ void BruteforceCondition(const Calculator &calculator,
         SkinRarity::Restricted, SkinRarity::Classified}) {
     size_t nRSkins = calculator.m_DB->m_SkinIDsByRarity[rarity].size();
 
-    for (size_t depth = 0; depth < g_MaxDepth; depth++) {
+    for (size_t depth = 0; depth < max_depth; depth++) {
       size_t l_TradeUpCount = 0;
       const std::vector<std::vector<size_t>> combinations =
           combination(ids_by_rarity[rarity].size(), depth + 1);
       for (size_t i = 0; i < combinations.size(); i++) {
         // const std::vector<size_t> ids = combinations[i];
         for (auto partition : ps[depth]) {
-          TradeUp tradeup(nRSkins, wear, stattrak, rarity, condition_non_st);
+          TradeUp tradeup(nRSkins, wear, stattrak, rarity);
 
           for (size_t j = 0; j < depth + 1; j++) {
             const size_t id = ids_by_rarity[rarity][combinations[i][j]];
             const size_t p = partition[j];
 
-            tradeup.mask_vector.insert(id) = p;
-            tradeup.mask_big.insert(id * 5 + condition_non_st) = p;
+            tradeup.m_Mask.insert(id) = p;
+            tradeup.m_MaskBig.insert(id * 5 + condition_non_st) = p;
           }
 
           const auto gross = calculator.ComputeGross(tradeup);
@@ -426,8 +405,8 @@ void BruteforceCondition(const Calculator &calculator,
   }
 }
 
-void Calculator::Bruteforce(
-    const std::vector<std::vector<WearType>> &wear_tuples) {
+void Calculator::Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
+                            size_t max_depth) const {
   MT_INFO("Bruteforcing...");
 
   wear_configs_t wear_configs[2] = {
@@ -472,7 +451,7 @@ void Calculator::Bruteforce(
     size_t i = 0;
     for (auto keyvalue : wear_configs[stattrak]) {
       tradeups[stattrak].push_back(std::vector<TradeUp>());
-      BruteforceCondition(std::cref(*this), keyvalue, stattrak,
+      BruteforceCondition(std::cref(*this), max_depth, keyvalue, stattrak,
                           std::ref(tradeups[stattrak][i]));
       i++;
     }

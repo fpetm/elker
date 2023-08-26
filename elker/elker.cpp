@@ -35,13 +35,15 @@ int main() {
       std::make_shared<motek::SkinDB>("./resources/skins.csv");
   motek::Calculator calc(db);
 
-  calc.Bruteforce({
-      //{60},{110},
-      {60, 110},
-      {110, 60},
-      {110, 265},
-      {265, 110},
-  });
+  calc.Bruteforce(
+      {
+          //{60},{110},
+          {60, 110},
+          {110, 60},
+          {110, 265},
+          {265, 110},
+      },
+      2);
 
   return 0;
 }
