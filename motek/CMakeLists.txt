@@ -1,4 +1,4 @@
-add_library(motek STATIC base64.cpp log.cpp skin.cpp tradeup.cpp)
+add_library(motek STATIC log.cpp skin.cpp tradeup.cpp calculator.cpp)
 
 target_link_libraries(motek 
   PRIVATE elker::elker_options

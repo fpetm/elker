@@ -8,4 +8,4 @@ inline constexpr int elker_version_patch { @PROJECT_VERSION_PATCH@ };
 inline constexpr int elker_version_tweak { @PROJECT_VERSION_TWEAK@ };
 inline constexpr std::string_view git_hash = "@GIT_HASH@";
 inline constexpr std::string_view git_short = "@GIT_HASH@";
-}
+} // namespace elker::cmake
