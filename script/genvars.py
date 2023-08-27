@@ -4,18 +4,6 @@ import operator
 
 MAX = 10
 
-head = '''#pragma once
-#include <unordered_map>
-#include <vector>
-namespace motek {
-'''
-
-bottom = '''
-}
-'''
-base = '''  const std::unordered_map<size_t, std::vector<std::vector<int>>> {name} = {{ 
-{content} }};'''
-
 def rows(table, A, B, k):
     n = 0
     while n < B:
@@ -136,11 +124,9 @@ def gen(A, B):
     return m
 
 def main():
-    print_compositions_flattened()
-    return
     s = ''
-    pairs = [[1,1],[1,2],[2,1],[2,2],] #[3,2],[2,3],[3,3]]
-    s += head
+    pairs = [[1,1],[1,2],[2,1],[2,2],[3,2],[2,3]]
+    base = 'const std::unordered_map<size_t, std::vector<uint64_t>> {name} = {{\n{content} }};'
 
     m = {}
     for A,B in pairs:
@@ -150,11 +136,13 @@ def main():
     for k,v in m.items():
         l = ''
         for j in v:
-            l += '{' + ','.join([f'{e}' for e in j]) + '},'
+#            l += '{' + ','.join([f'{e}' for e in j]) + '},'
+            l += f'0x{gen_part(j):0{len(j)}X} ,'
         c += f'    {{0x{k:016X}, {{{l}}}}},\n'
 
-    s += base.format(name = f'g_Variations', content = c)
-    s += bottom
+    
+    s += base.format(name = 'g_Variations', content = c)
+    s += '\n};'
     sys.stdout.write(s)
 
 if __name__ == '__main__':

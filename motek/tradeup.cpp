@@ -8,7 +8,7 @@ TradeUp::TradeUp(size_t nskins, wear_t avg_wear, bool stattrak,
   m_Mask.resize(m_NSkins);
   m_MaskBig.resize(m_NSkins * 5);
   m_Mask.reserve(10);
-  m_MaskBig.reserve(10);
+  m_MaskBig.reserve(50);
 
   Clear();
 }
@@ -16,6 +16,9 @@ TradeUp::TradeUp(size_t nskins, wear_t avg_wear, bool stattrak,
 void TradeUp::Clear() {
   m_Computed = false;
   m_Cost = m_GrossReturn = m_NetReturn = 0;
+
+  m_Mask.setZero();
+  m_MaskBig.setZero();
 }
 
 void TradeUp::SetPrices(float cost, float grossreturn, float netreturn) {
