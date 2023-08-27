@@ -1,5 +1,6 @@
 import itertools
 import sys
+import operator
 
 MAX = 10
 
@@ -60,17 +61,68 @@ def partition(n,m, minimum = 1):
             ret.append(p)
     return ret
 
-def gen_key(p1,p2):
+def gen_part(p):
     BIT_COUNT = 4
+    z = 0
+    for i,e in enumerate(p):
+        z |= e << (BIT_COUNT * i)
+    return z
+
+def gen_key(p1,p2):
     s = 0
 
     parts = [0,0]
     for i, p in enumerate([p1,p2]):
-        for j,e in enumerate(p):
-            parts[i] |= e << (BIT_COUNT * j)
+        parts[i] = gen_part(p)
     s = (parts[1] << 32) | parts[0]
 #    sys.stderr.write(f'{s:16X} : {p1} : {p2}\n')
     return s
+
+def print_compositions():
+    s = ''
+    s += 'const std::array<std::vector<uint64_t>, 10> g_Compositions = {\n'
+    for i in range(1, 11):
+        sys.stderr.write(f'running {i}\n'); sys.stderr.flush()
+        part = partition(10, i)
+        s += '  {'
+        for p in part:
+            s += '0x{:X}, '.format(gen_part(p))
+        s += '},\n'
+    s += '}'
+    sys.stdout.write(s)
+
+def print_compositions_accumulated():
+    s = ''
+    s += 'const std::array<std::vector<uint64_t>, 10> g_CompositionsAccumulated = {\n'
+    for i in range(1, 11):
+        sys.stderr.write(f'running {i}\n'); sys.stderr.flush()
+        part = partition(10, i)
+        s += '  {'
+        for p in part:
+            accu = itertools.accumulate(p, operator.add)
+            s += '0x{:X}, '.format(gen_part(accu))
+        s += '},\n'
+    s += '}'
+    sys.stdout.write(s)
+
+def print_compositions_flattened():
+    s = ''
+    s += 'const std::array<std::vector<uint64_t>, 10> g_CompositionsFlat = {\n'
+    for i in range(1, 11):
+        sys.stderr.write(f'running {i}\n'); sys.stderr.flush()
+        part = partition(10, i)
+        s += '  {'
+        for p in part:
+            accu = list(itertools.accumulate(p, operator.add))
+            g = []
+            k = 0
+            for index in range(10):
+                if index == accu[k]: k+=1
+                g.append(k)
+            s += '0x{:X}, '.format(gen_part(g))
+        s += '},\n'
+    s += '}'
+    sys.stdout.write(s)
 
 def gen(A, B):
     p1s = partition(MAX, A, 0)
@@ -84,8 +136,10 @@ def gen(A, B):
     return m
 
 def main():
+    print_compositions_flattened()
+    return
     s = ''
-    pairs = [[1,1],[1,2],[2,1],[2,2],[3,2],[2,3],[3,3]]
+    pairs = [[1,1],[1,2],[2,1],[2,2],] #[3,2],[2,3],[3,3]]
     s += head
 
     m = {}

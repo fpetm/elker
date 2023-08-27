@@ -27,6 +27,5 @@ void Log::Init() {
   spdlog::register_logger(s_EKLogger);
   s_EKLogger->set_level(spdlog::level::trace);
   s_EKLogger->flush_on(spdlog::level::trace);
-  m_Initialized = true;
 }
 } // namespace motek

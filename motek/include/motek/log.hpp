@@ -8,12 +8,8 @@ public:
   static void Init();
   static std::shared_ptr<spdlog::logger> &GetMTLogger() { return s_MTLogger; }
   static std::shared_ptr<spdlog::logger> &GetEKLogger() { return s_EKLogger; }
-
-  static bool Initialized() { return m_Initialized; }
-
 private:
   static std::shared_ptr<spdlog::logger> s_MTLogger, s_EKLogger;
-  static bool m_Initialized;
 };
 
 } // namespace motek

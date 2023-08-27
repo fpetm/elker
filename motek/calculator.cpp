@@ -4,11 +4,9 @@
 #include <motek/calculator.hpp>
 #include <thread>
 
-#include <motek/combinate.hpp>
 #include <motek/log.hpp>
-#include <motek/partitions.hpp>
 
-#include <motek/variations.hpp>
+#include "combinatorics.hpp"
 
 // #define MT
 
@@ -43,26 +41,17 @@ generate_wear_variations(const std::vector<std::vector<wear_t>> &wear_tuples,
   wear_configs_t values;
 
   for (std::vector<wear_t> wears : wear_tuples) {
-    std::vector<std::array<int, 10>> partitions =
-        create_partitions(wears.size());
-    for (size_t i = 0; i < wears.size(); i++) {
-      std::array<int, 10> w;
-      for (size_t j = 0; j < 10; j++) {
-        w[j] = i;
-      }
-      partitions.push_back(w);
-    }
-
-    for (auto partition : partitions) {
+    std::vector<uint64_t> compositions = combinatorics::g_CompositionsFlat[wears.size()];
+    for (uint64_t composition : compositions) {
       wear_t avg = 0;
       wear_config_t map;
 
       for (size_t i = 0; i < 10; i++) {
-        wear_t w = wears[partition[i]];
+        wear_t w = wears[combinatorics::at(composition, i)];
         map[ConditionFromFloat(w, stattrak)]++;
 
         avg += w;
-        //          ws[i] = ConditionFromFloat(w, stattrak);
+//        ws[i] = ConditionFromFloat(w, stattrak);
       }
 
       avg /= 10;
@@ -368,6 +357,7 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
     }
   }
 
+#if 0
   for (SkinRarity rarity :
        {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec,
         SkinRarity::Restricted, SkinRarity::Classified}) {
@@ -403,6 +393,7 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
       g_TradeUpCount += l_TradeUpCount;
     }
   }
+#endif
 }
 
 void Calculator::Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,

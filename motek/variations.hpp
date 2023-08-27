@@ -1,7 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include <vector>
-namespace motek {
+namespace motek::combinatorics {
 const std::unordered_map<size_t, std::vector<std::vector<int>>> g_Variations = {
     {0x0000000A0000000A,
      {
