@@ -11,9 +11,9 @@ constexpr float g_ValveTaxPercentage = 0.87F;
 constexpr inline float ValveTax(float price) {
   return price * g_ValveTaxPercentage - g_ValveTaxFlat;
 }
-using wear_t = short;
+using wear_t = int64_t;
 constexpr wear_t g_WearRangeMin = 0;
-constexpr wear_t g_WearRangeMax = 1000;
+constexpr wear_t g_WearRangeMax = 10000;
 constexpr int g_ConditionCount = 5;
 
 constexpr wear_t g_WearRange1 = static_cast<wear_t>(
@@ -25,6 +25,9 @@ constexpr wear_t g_WearRange3 = static_cast<wear_t>(
 constexpr wear_t g_WearRange4 = static_cast<wear_t>(
     0.45 * (g_WearRangeMax - g_WearRangeMin) + g_WearRangeMin);
 
+constexpr wear_t WearValueFromFloat(double wear) {
+  return wear_t(wear * double(g_WearRangeMax));
+}
 constexpr double WearValueToFloat(wear_t wear) {
   return float(wear) / float(g_WearRangeMax);
 }
