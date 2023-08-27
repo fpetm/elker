@@ -41,7 +41,8 @@ generate_wear_variations(const std::vector<std::vector<wear_t>> &wear_tuples,
   wear_configs_t values;
 
   for (std::vector<wear_t> wears : wear_tuples) {
-    std::vector<uint64_t> compositions = combinatorics::g_CompositionsFlat[wears.size()];
+    std::vector<uint64_t> compositions =
+        combinatorics::g_CompositionsFlat[wears.size()];
     for (uint64_t composition : compositions) {
       wear_t avg = 0;
       wear_config_t map;
@@ -51,7 +52,7 @@ generate_wear_variations(const std::vector<std::vector<wear_t>> &wear_tuples,
         map[ConditionFromFloat(w, stattrak)]++;
 
         avg += w;
-//        ws[i] = ConditionFromFloat(w, stattrak);
+        //        ws[i] = ConditionFromFloat(w, stattrak);
       }
 
       avg /= 10;

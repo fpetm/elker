@@ -8,6 +8,7 @@ public:
   static void Init();
   static std::shared_ptr<spdlog::logger> &GetMTLogger() { return s_MTLogger; }
   static std::shared_ptr<spdlog::logger> &GetEKLogger() { return s_EKLogger; }
+
 private:
   static std::shared_ptr<spdlog::logger> s_MTLogger, s_EKLogger;
 };
