@@ -395,7 +395,7 @@ constexpr size_t nCr(size_t n, size_t c) {
   return num / denom;
 }
 
-constexpr std::vector<std::vector<size_t>> combination(size_t n, size_t s) {
+std::vector<std::vector<size_t>> combination(size_t n, size_t s) {
   // std::cout << n << " : " << s << "\n";
   if (n < s || n < 0)
     return {};
