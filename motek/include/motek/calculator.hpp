@@ -12,7 +12,8 @@ generate_wear_variations(const std::vector<std::vector<wear_t>> &wear_tuples,
 
 class Calculator {
 public:
-  explicit Calculator(std::shared_ptr<SkinDB> database);
+  //Calculator();
+  Calculator(std::shared_ptr<SkinDB> database);
   [[nodiscard]] std::shared_ptr<SkinDB> getDB() const { return m_DB; }
 
   [[nodiscard]] std::string ExportTradeUp(TradeUp &tradeup) const;

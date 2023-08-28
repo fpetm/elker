@@ -125,7 +125,7 @@ def gen(A, B):
 
 def main():
     s = ''
-    pairs = [[1,1],[1,2],[2,1],[2,2],[3,2],[2,3]]
+    pairs = [[1,1],[1,2],[2,1],[2,2],[3,2],[2,3],[1,3],[3,1]]
     base = 'const std::unordered_map<size_t, std::vector<uint64_t>> {name} = {{\n{content} }};'
 
     m = {}

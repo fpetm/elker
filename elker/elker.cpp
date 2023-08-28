@@ -10,7 +10,7 @@ constexpr motek::wear_t g_wBS = motek::WearValueFromFloat(0.725);
 
 const std::vector<std::vector<motek::wear_t>> g_WearTuples = {
     {g_wFN},        {g_wMW},        {g_wFT},        {g_wWW},        {g_wBS},
-    {g_wFN, g_wMW}, {g_wMW, g_wFT}, {g_wFT, g_wWW}, {g_wWW, g_wBS},
+    {g_wFN, g_wMW}, {g_wMW, g_wFT}, {g_wFT, g_wWW}, {g_wWW, g_wBS}, 
 };
 
 int main() {
@@ -19,13 +19,11 @@ int main() {
   EK_INFO("Welcome to elker v{}-{}", elker::cmake::elker_version,
           elker::cmake::git_hash);
 
-  EK_INFO("{} {} {} {} {}", g_wFN, g_wMW, g_wFT, g_wWW, g_wBS);
-
   std::shared_ptr<motek::SkinDB> database =
-      std::make_shared<motek::SkinDB>("./resources/skins.csv");
-  motek::Calculator calc(database);
+      std::make_shared<motek::SkinDB>("c:/prog/elker/resources/skins.csv");
+  std::unique_ptr<motek::Calculator> calc = std::make_unique<motek::Calculator>(database);
 
-  calc.Bruteforce(g_WearTuples, 1);
+  calc->Bruteforce(g_WearTuples, 2);
 
   return 0;
 }

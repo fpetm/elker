@@ -47,7 +47,7 @@ macro(elker_setup_options)
     option(elker_ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
     option(elker_ENABLE_CPPCHECK "Enable cpp-check analysis" OFF)
     option(elker_ENABLE_PCH "Enable precompiled headers" OFF)
-    option(elker_ENABLE_CACHE "Enable ccache" ON)
+    option(elker_ENABLE_CACHE "Enable ccache" OFF)
   endif()
 
   if(NOT PROJECT_IS_TOP_LEVEL)

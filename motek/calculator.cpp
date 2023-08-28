@@ -1,6 +1,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <sstream>
 #include <motek/calculator.hpp>
 #include <thread>
 
@@ -210,8 +211,6 @@ std::string Calculator::ExportTradeUp(TradeUp &tradeup) const {
   const std::vector<size_t> hids_by_rarity =
       m_DB->m_SkinIDsByRarity[tradeup.m_Rarity + 1];
 
-  ss << ""
-     << ",";
   ss << tradeup.m_Cost << ",";
   ss << tradeup.m_GrossReturn << ",";
   ss << tradeup.m_GrossReturn - tradeup.m_Cost << ",";
@@ -223,16 +222,12 @@ std::string Calculator::ExportTradeUp(TradeUp &tradeup) const {
   ss << tradeup.m_AverageWear << ",";
   ss << tradeup.m_StatTrak << ",";
 
-  const Eigen::VectorXf mask = tradeup.m_Mask.toDense();
-  const Eigen::MatrixXf mask_big = tradeup.m_MaskBig.toDense();
-  const Eigen::VectorXf probabilities = tradeup.m_Probability.toDense();
 
-  for (int i = 0; i < ids_by_rarity.size() * 5; i++) {
-    if (mask_big(i) > 0.0f) {
-      size_t id = ids_by_rarity[i / 5];
-      const int amount = static_cast<int>(mask_big(i));
+  for (Eigen::SparseVector<float>::InnerIterator it(tradeup.m_MaskBig); it; ++it) {
+      size_t id = ids_by_rarity[it.index() / 5];
+      const int amount = static_cast<int>(it.value());
       for (int j = 0; j < amount; j++) {
-        SkinCondition condition = SkinCondition(i % 5);
+        SkinCondition condition = SkinCondition(it.index() % 5);
         if (tradeup.m_StatTrak) {
           switch (condition) {
           case BS:
@@ -257,12 +252,10 @@ std::string Calculator::ExportTradeUp(TradeUp &tradeup) const {
            << ShortStringFromWeaponCondition(condition) << ") : $"
            << skins[id].m_PricesSell[condition] << ",";
       }
-    }
   }
 
-  for (int i = 0; i < hids_by_rarity.size(); i++) {
-    if (probabilities(i) > 0.0f) {
-      size_t id = hids_by_rarity[i];
+  for (Eigen::SparseVector<float>::InnerIterator it(tradeup.m_Probability); it; ++it) {
+      size_t id = hids_by_rarity[it.index()];
       const SkinCondition condition =
           MapCondition(skins[id], tradeup.m_AverageWear, tradeup.m_StatTrak);
       ss << StringFromWeaponType(skins[id].m_WeaponType) << " | "
@@ -271,8 +264,7 @@ std::string Calculator::ExportTradeUp(TradeUp &tradeup) const {
          << ",";
       ss << std::to_string(skins[id].m_PricesBuy[condition] * 0.87f - 0.01f)
          << ",";
-      ss << std::to_string(probabilities(i)) << ", ";
-    }
+      ss << std::to_string(it.value()) << ", ";
   }
 
   ss << "\n";
@@ -309,11 +301,13 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
 
   std::array<uint8_t, 8> condition_amount_array = {};
   std::array<SkinCondition, 8> condition_type_array = {};
+  std::array<SkinCondition, 8> condition_type_with_st_array = {};
   uint64_t condition_count = wear_config.size();
   {
     size_t index = 0;
     for (const auto &[condition, amount] : wear_config) {
       condition_type_array[index] = condition;
+      condition_type_with_st_array[index] = SkinCondition(condition + 5*stattrak);
       condition_amount_array[index] = amount;
       index++;
     }
@@ -333,7 +327,7 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
       for (int i = 0; i < condition_count; i++) {
         if (calculator.m_DB
                 ->m_Skins[calculator.m_DB->m_SkinIDsByRarity[rarity][id]]
-                .m_Banned[condition_type_array[i]] == true) {
+                  .m_Banned[condition_type_with_st_array[i]] == true) {
           banned = true;
         }
       }
@@ -346,7 +340,7 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
   for (SkinRarity rarity :
        {SkinRarity::Consumer, SkinRarity::Industrial, SkinRarity::MilSpec,
         SkinRarity::Restricted, SkinRarity::Classified}) {
-    size_t nRSkins = ids_by_rarity[rarity].size();
+    size_t nRSkins = calculator.m_DB->m_SkinIDsByRarity[rarity].size();
 
     for (size_t depth = 1; depth <= max_depth; depth++) {
       size_t l_TradeUpCount = 0;
@@ -356,14 +350,14 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
 
       for (std::vector<uint64_t> ids : combinations) {
         for (uint64_t composition : combinatorics::g_Compositions[depth]) {
-          TradeUp grosstradeup(nRSkins, wear, stattrak, rarity);
+          TradeUp tradeup(nRSkins, wear, stattrak, rarity);
 
           for (size_t i = 0; i < depth; i++) {
-            grosstradeup.SetAmount(ids_by_rarity[rarity][ids[i]],
+            tradeup.SetAmount(ids_by_rarity[rarity][ids[i]],
                                    combinatorics::at(composition, i));
           }
 
-          const float gross = calculator.ComputeGross(grosstradeup);
+          const float gross = calculator.ComputeGross(tradeup);
 
           const uint64_t combined_key =
               generate_double_key(composition, condition_key);
@@ -372,22 +366,19 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
               combinatorics::g_Variations.at(combined_key);
 
           for (const auto &variation : variations) {
-            TradeUp costtradeup(nRSkins, wear, stattrak, rarity);
             for (int i = 0; i < depth; i++) {
               const uint64_t id = ids_by_rarity[rarity][ids[i]];
               for (int j = 0; j < condition_count; j++) {
                 SkinCondition local_condition = condition_type_array[j];
                 uint64_t amount = combinatorics::at(variation, j * depth + i);
-                costtradeup.SetAmountCondition(id, amount, local_condition);
+                tradeup.SetAmountCondition(id, amount, local_condition);
               }
             }
-            const float cost = calculator.ComputeCost(costtradeup);
+            const float cost = calculator.ComputeCost(tradeup);
             if (cost < gross) {
-              TradeUp tradeup(nRSkins, wear, stattrak, rarity);
-              tradeup.m_Mask = grosstradeup.m_Mask;
-              tradeup.m_MaskBig = costtradeup.m_MaskBig;
               tradeups.push_back(tradeup);
             }
+            tradeup.m_MaskBig.setZero();
           }
           l_TradeUpCount++;
         }
@@ -404,7 +395,7 @@ void Calculator::Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
 
   wear_configs_t wear_configs[2] = {
       generate_wear_variations(wear_tuples, false),
-      generate_wear_variations(wear_tuples, true),
+      generate_wear_variations(wear_tuples, false),
   };
 
   std::thread reporter;
@@ -485,8 +476,8 @@ void Calculator::Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
   ///(t2.grossreturn / t2.cost)); });
 
   std::ofstream of("out.csv");
-  of << "Hash,Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,"
-        "Variance,Standard Deviation,VMR,Wear,StatTrak,";
+  of << "Cost,EV,GrossProfit$,GrossProfit%,NetProfit$,NetProfit%,Profit%,"
+        "Wear,StatTrak,";
   for (int i = 0; i < 10; i++)
     of << "Weapon" << i + 1 << ",";
   for (int i = 0; i < 20; i++)
