@@ -4,42 +4,42 @@ import operator
 
 MAX = 10
 
-def rows(table, A, B, k):
-    n = 0
-    while n < B:
-        yield table[n*A+k]
-        n += 1
+def rows(table, column_count, row_count, k):
+    index = 0
+    while index < row_count:
+        yield table[index*column_count+k]
+        index += 1
 
-def cols(table, A, B, k):
-    n = 0
-    while n < A:
-        yield table[k*A+n]
-        n += 1
+def cols(table, column_count, k):
+    index = 0
+    while index < column_count:
+        yield table[k*column_count+index]
+        index += 1
 
-def genvars(A, B, summa_a, summa_b):
-    r = range(0,MAX+1)
-    product = itertools.product(*[r for _ in range(A*B)])
+def genvars(column_count, row_count, summa_a, summa_b):
+    products = itertools.product(*[range(0,MAX+1) for _ in range(column_count*row_count)])
 
     ret = []
 
-    for p in product:
-        if sum(p) != MAX: continue
-        
+    for product in products:
+        if sum(product) != MAX:
+            continue
         try:
-            for k, s in enumerate(summa_a):
-                if sum(rows(p, A, B, k)) != s:
+            for k, summa in enumerate(summa_a):
+                if sum(rows(product, column_count, row_count, k)) != summa:
                     raise StopIteration
-            for k, s in enumerate(summa_b):
-                if sum(cols(p, A, B, k)) != s:
+            for k, summa in enumerate(summa_b):
+                if sum(cols(product, column_count, k)) != summa:
                     raise StopIteration
         except StopIteration:
             continue
 
-        ret.append(p)
+        ret.append(product)
     return ret
 
 def partition(n,m, minimum = 1):
-    if m == 1: return [(n,)]
+    if m == 1:
+        return [(n,)]
     r = range(minimum,n)
     product = itertools.product(*[r for _ in range(m)])
 
@@ -70,11 +70,12 @@ def print_compositions():
     s = ''
     s += 'const std::array<std::vector<uint64_t>, 10> g_Compositions = {\n'
     for i in range(1, 11):
-        sys.stderr.write(f'running {i}\n'); sys.stderr.flush()
+        sys.stderr.write(f'running {i}\n')
+        sys.stderr.flush()
         part = partition(10, i)
         s += '  {'
         for p in part:
-            s += '0x{:X}, '.format(gen_part(p))
+            s += f'0x{gen_part(p):X}, '
         s += '},\n'
     s += '}'
     sys.stdout.write(s)
@@ -83,12 +84,13 @@ def print_compositions_accumulated():
     s = ''
     s += 'const std::array<std::vector<uint64_t>, 10> g_CompositionsAccumulated = {\n'
     for i in range(1, 11):
-        sys.stderr.write(f'running {i}\n'); sys.stderr.flush()
+        sys.stderr.write(f'running {i}\n')
+        sys.stderr.flush()
         part = partition(10, i)
         s += '  {'
         for p in part:
             accu = itertools.accumulate(p, operator.add)
-            s += '0x{:X}, '.format(gen_part(accu))
+            s += f'0x{gen_part(accu):X}, '
         s += '},\n'
     s += '}'
     sys.stdout.write(s)
@@ -97,7 +99,8 @@ def print_compositions_flattened():
     s = ''
     s += 'const std::array<std::vector<uint64_t>, 10> g_CompositionsFlat = {\n'
     for i in range(1, 11):
-        sys.stderr.write(f'running {i}\n'); sys.stderr.flush()
+        sys.stderr.write(f'running {i}\n')
+        sys.stderr.flush()
         part = partition(10, i)
         s += '  {'
         for p in part:
@@ -105,9 +108,10 @@ def print_compositions_flattened():
             g = []
             k = 0
             for index in range(10):
-                if index == accu[k]: k+=1
+                if index == accu[k]:
+                    k+=1
                 g.append(k)
-            s += '0x{:X}, '.format(gen_part(g))
+            s += f'0x{gen_part(g):X}, '
         s += '},\n'
     s += '}'
     sys.stdout.write(s)
@@ -140,7 +144,6 @@ def main():
             l += f'0x{gen_part(j):0{len(j)}X} ,'
         c += f'    {{0x{k:016X}, {{{l}}}}},\n'
 
-    
     s += base.format(name = 'g_Variations', content = c)
     s += '\n};'
     sys.stdout.write(s)

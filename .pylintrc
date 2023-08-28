@@ -1,5 +1,5 @@
 [MESSAGES CONTROL]
-disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
+disable=missing-module-docstring,missing-function-docstring,missing-class-docstring,invalid-name
 [General]
 max-locals=64
 max-statements=128

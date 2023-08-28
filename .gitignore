@@ -9,3 +9,4 @@ resources/csgostash.csv
 script/__pycache__/
 .env
 .cache
+venv
