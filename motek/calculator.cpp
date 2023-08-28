@@ -9,7 +9,7 @@
 
 #include "combinatorics.hpp"
 
-#define MT
+//#define MT
 
 namespace motek {
 static size_t g_TradeUpCount;
@@ -345,10 +345,10 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
     for (size_t depth = 1; depth <= max_depth; depth++) {
       size_t l_TradeUpCount = 0;
 
-      const std::vector<std::vector<size_t>> combinations =
-          combinatorics::combination(ids_by_rarity[rarity].size(), depth);
-
-      for (std::vector<uint64_t> ids : combinations) {
+      std::vector<size_t> ids =
+          combinatorics::first_combination(ids_by_rarity[rarity].size(), depth);
+      for (uint64_t i = 0;
+           i < combinatorics::nCr(ids_by_rarity[rarity].size(), depth); i++) {
         for (uint64_t composition : combinatorics::g_Compositions[depth]) {
           TradeUp tradeup(nRSkins, wear, stattrak, rarity);
 
@@ -365,14 +365,12 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
           const std::vector<uint64_t> &variations =
               combinatorics::g_Variations.at(combined_key);
 
-          for (const auto &variation : variations) {
-            for (int i = 0; i < depth; i++) {
-              const uint64_t id = ids_by_rarity[rarity][ids[i]];
-              for (int j = 0; j < condition_count; j++) {
-                SkinCondition local_condition = condition_type_array[j];
-                uint64_t amount = combinatorics::at(variation, j * depth + i);
-                tradeup.SetAmountCondition(id, amount, local_condition);
-              }
+          for (uint64_t variation : variations) {
+            for (int k = 0; k < depth * condition_count; k++) {
+              const uint64_t id = ids_by_rarity[rarity][ids[k % depth]];
+              SkinCondition local_condition = condition_type_array[k / depth];
+              uint64_t amount = combinatorics::at(variation, k);
+              tradeup.SetAmountCondition(id, amount, local_condition);
             }
             const float cost = calculator.ComputeCost(tradeup);
             if (cost < gross) {
@@ -382,6 +380,7 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
           }
           l_TradeUpCount++;
         }
+        combinatorics::next_combination(ids, depth);
       }
       std::lock_guard<std::mutex> guard(g_TradeUpCountMutex);
       g_TradeUpCount += l_TradeUpCount;
@@ -390,13 +389,10 @@ void BruteforceCondition(const Calculator &calculator, size_t max_depth,
 }
 
 void Calculator::Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
-                            size_t max_depth) const {
+                            size_t max_depth, bool multithreaded) const {
   MT_INFO("Bruteforcing...");
 
-  wear_configs_t wear_configs[2] = {
-      generate_wear_variations(wear_tuples, false),
-      generate_wear_variations(wear_tuples, false),
-  };
+  wear_configs_t wear_configs = generate_wear_variations(wear_tuples, false);
 
   std::thread reporter;
   std::vector<std::vector<TradeUp>> tradeups[2];
@@ -404,44 +400,41 @@ void Calculator::Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
   std::chrono::steady_clock::time_point begin =
       std::chrono::steady_clock::now();
 
-  // this is retarded but idc lol
-  // it works
-  // at least i hope it does
-#ifdef MT
-  reporter = std::thread(ReportAmount);
-  std::vector<std::thread> threads[2];
-  for (size_t stattrak = 0; stattrak <= 1; stattrak++) {
-    size_t index = 0;
-    tradeups[stattrak].resize(wear_configs[stattrak].size());
-    for (auto keyvalue : wear_configs[stattrak]) {
-      tradeups[stattrak][index] = std::vector<TradeUp>();
-      threads[stattrak].emplace_back(
-          std::thread(BruteforceCondition, std::cref(*this), max_depth,
-                      keyvalue, stattrak, std::ref(tradeups[stattrak][index])));
-      index++;
+  if (multithreaded) {
+    reporter = std::thread(ReportAmount);
+    std::vector<std::thread> threads[2];
+    for (size_t stattrak = 0; stattrak <= 1; stattrak++) {
+      size_t index = 0;
+      tradeups[stattrak].resize(wear_configs.size());
+      for (auto keyvalue : wear_configs) {
+        tradeups[stattrak][index] = std::vector<TradeUp>();
+        threads[stattrak].emplace_back(std::thread(
+            BruteforceCondition, std::cref(*this), max_depth, keyvalue,
+            stattrak, std::ref(tradeups[stattrak][index])));
+        index++;
+      }
     }
-  }
 
-  for (size_t stattrak = 0; stattrak <= 1; stattrak++) {
-    size_t i = 0;
-    for (auto keyvalue : wear_configs[stattrak]) {
-      threads[stattrak][i].join();
-      i++;
+    for (size_t stattrak = 0; stattrak <= 1; stattrak++) {
+      size_t i = 0;
+      for (auto keyvalue : wear_configs) {
+        threads[stattrak][i].join();
+        i++;
+      }
+    }
+  } else {
+    // TODO making single threading work
+    reporter = std::thread(ReportAmount);
+    for (size_t stattrak = 0; stattrak <= 1; stattrak++) {
+      size_t i = 0;
+      for (auto keyvalue : wear_configs) {
+        tradeups[stattrak].push_back(std::vector<TradeUp>());
+        BruteforceCondition(std::cref(*this), max_depth, keyvalue, stattrak,
+                            std::ref(tradeups[stattrak][i]));
+        i++;
+      }
     }
   }
-#else
-  // TODO making single threading work
-  reporter = std::thread(ReportAmount);
-  for (size_t stattrak = 0; stattrak <= 1; stattrak++) {
-    size_t i = 0;
-    for (auto keyvalue : wear_configs[stattrak]) {
-      tradeups[stattrak].push_back(std::vector<TradeUp>());
-      BruteforceCondition(std::cref(*this), max_depth, keyvalue, stattrak,
-                          std::ref(tradeups[stattrak][i]));
-      i++;
-    }
-  }
-#endif
 
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 

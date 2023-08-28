@@ -395,25 +395,28 @@ constexpr size_t nCr(size_t n, size_t c) {
   return num / denom;
 }
 
-std::vector<std::vector<size_t>> combination(size_t n, size_t s) {
-  // std::cout << n << " : " << s << "\n";
-  if (n < s || n < 0)
-    return {};
-  std::vector<bool> mask(n);
-  std::fill(mask.end() - s, mask.end(), true);
+std::vector<size_t> first_combination(size_t n, size_t t) {
+  std::vector<size_t> c(t + 2);
+  int j, x;
+  j = x = 0;
 
-  std::vector<std::vector<size_t>> r(nCr(n, s));
-  size_t k = 0;
-  do {
-    r[k].resize(s);
-    size_t j = 0;
-    for (size_t i = 0; i < n; i++) {
-      if (mask[i])
-        r[k][j++] = i;
-    }
-    k++;
-  } while (std::next_permutation(mask.begin(), mask.end()));
-
-  return r;
+  for (j = 1; j <= t; j++) {
+    c[j - 1] = j - 1;
+  }
+  c[t] = n;
+  c[t + 1] = 0;
+  return c;
 }
+
+void next_combination(std::vector<size_t>& c, size_t t) {
+  int j = 1;
+  while (c[j - 1] + 1 == c[j]) {
+    c[j - 1] = j - 1;
+    j++;
+    if (j > t)
+      break;
+  }
+  c[j - 1]++;
+}
+
 } // namespace motek::combinatorics

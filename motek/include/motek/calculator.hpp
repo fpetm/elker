@@ -19,7 +19,7 @@ public:
   [[nodiscard]] std::string ExportTradeUp(TradeUp &tradeup) const;
 
   void Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
-                  size_t max_depth) const;
+                  size_t max_depth, bool multithreaded) const;
 
   [[nodiscard]] float ComputeGross(TradeUp &tradeup) const;
   [[nodiscard]] float ComputeCost(TradeUp &tradeup) const;
