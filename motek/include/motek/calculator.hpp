@@ -12,14 +12,19 @@ generate_wear_variations(const std::vector<std::vector<wear_t>> &wear_tuples,
 
 class Calculator {
 public:
-  //Calculator();
+  // Calculator();
   Calculator(std::shared_ptr<SkinDB> database);
   [[nodiscard]] std::shared_ptr<SkinDB> getDB() const { return m_DB; }
+  void CacheProbabilities(int max_depth = 2);
 
   [[nodiscard]] std::string ExportTradeUp(TradeUp &tradeup) const;
 
-  void Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
-                  size_t max_depth, bool multithreaded) const;
+  [[nodiscard]] std::vector<TradeUp>
+  Bruteforce(const std::vector<std::vector<wear_t>> &wear_tuples,
+             size_t max_depth, bool multithreaded) const;
+
+  void ExportTradeUps(const std::vector<TradeUp> &tradeups,
+                      std::string path) const;
 
   [[nodiscard]] float ComputeGross(TradeUp &tradeup) const;
   [[nodiscard]] float ComputeCost(TradeUp &tradeup) const;
@@ -37,6 +42,9 @@ private:
 
   Eigen::SparseVector<float> m_Factor[SkinRarity::Contraband];
   Eigen::SparseMatrix<float> m_Transformer[SkinRarity::Contraband];
+
+  std::vector<Eigen::SparseVector<float>>
+      m_ProbabilityCache[SkinRarity::Contraband][10];
 };
 
 } // namespace motek

@@ -27,13 +27,13 @@ void TradeUp::SetPrices(float cost, float grossreturn, float netreturn) {
   m_NetReturn = netreturn;
 }
 
-void TradeUp::SetAmount(int id, int amount) { 
-    //MT_INFO("Set amount {} = {}", id, amount);
-    m_Mask.insert(id) = amount; 
+void TradeUp::SetAmount(int id, int amount) {
+  m_Mask.insert(id) = static_cast<float>(amount);
 }
 void TradeUp::SetAmountCondition(int id, int amount,
                                  SkinCondition condition_no_stattrak) {
-  m_MaskBig.insert(id * g_ConditionCount + condition_no_stattrak) = amount;
+  m_MaskBig.insert(id * g_ConditionCount + condition_no_stattrak) =
+      static_cast<float>(amount);
 }
 
 } // namespace motek

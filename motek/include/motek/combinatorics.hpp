@@ -379,7 +379,7 @@ const std::array<std::vector<uint64_t>, 11> g_CompositionsFlat = {
     },
 };
 
-constexpr uint64_t at(uint64_t element, uint64_t index) {
+inline constexpr uint64_t at(uint64_t element, uint64_t index) {
   const uint64_t shiftn = 4 * index;
   const uint64_t mask = static_cast<uint64_t>(0xF) << shiftn;
   return (element & mask) >> shiftn;
@@ -395,28 +395,8 @@ constexpr size_t nCr(size_t n, size_t c) {
   return num / denom;
 }
 
-std::vector<size_t> first_combination(size_t n, size_t t) {
-  std::vector<size_t> c(t + 2);
-  int j, x;
-  j = x = 0;
+std::vector<size_t> first_combination(size_t n, size_t t);
 
-  for (j = 1; j <= t; j++) {
-    c[j - 1] = j - 1;
-  }
-  c[t] = n;
-  c[t + 1] = 0;
-  return c;
-}
-
-void next_combination(std::vector<size_t>& c, size_t t) {
-  int j = 1;
-  while (c[j - 1] + 1 == c[j]) {
-    c[j - 1] = j - 1;
-    j++;
-    if (j > t)
-      break;
-  }
-  c[j - 1]++;
-}
+void next_combination(std::vector<size_t> &c, size_t t);
 
 } // namespace motek::combinatorics
