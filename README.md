@@ -1,4 +1,7 @@
 # elker - A Counter Strike Tradeup Searcher
+![elker](resources/branding/elker-logo.png)
+
+
 [![ci](https://github.com/fpetm/elker/actions/workflows/ci.yml/badge.svg)](https://github.com/fpetm/elker/actions/workflows/ci.yml)
 
 ## Build instructions
