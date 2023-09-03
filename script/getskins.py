@@ -104,11 +104,9 @@ def load(path):
     print(f'Parsed {path} in {toc - tic:0.4f} seconds!')
     return success
 
-ITEM_GAME_PATH = './resources/items_game.txt'
-CSGO_ENGLISH_PATH = './resources/csgo_english.txt'
-SKINDATA_PATH = './resources/skindata.csv'
-
-def main():
+def extract_skins(SKINDATA_PATH = './resources/skindata.csv',
+                  ITEM_GAME_PATH = './resources/items_game.txt',
+                  CSGO_ENGLISH_PATH = './resources/csgo_english.txt'):
     def translate(dictionary, name):
         for entry, value in dictionary.items():
             if name.upper() == entry.upper():
@@ -248,6 +246,8 @@ def main():
 ##              print(skin)
 
             writer.writerow([tag, weapon_type, rarity, collection, wear_min, wear_max])
+def main():
+    extract_skins()
 
 if __name__ == '__main__':
     main()

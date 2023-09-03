@@ -3,15 +3,12 @@ import time
 import csv
 import market
 
-SKINDATA_PATH = './resources/skindata.csv'
-SKINS_PATH = './resources/skins.csv'
-
 WEAR_VALUES = ('Battle-Scarred', 'Well-Worn', 'Field-Tested', 'Minimal Wear', 'Factory New')
 WEAR_VALUES_SHORT = ('BS', 'WW', 'FT', 'MW', 'FN')
 
-def load_skindata():
+def load_skindata(skindata_path = './resources/skindata.csv'):
     data = []
-    with open(SKINDATA_PATH, 'r', encoding='utf8') as file:
+    with open(skindata_path, 'r', encoding='utf8') as file:
         reader = csv.reader(file, delimiter = ',', quotechar = '"')
         for row in reader:
             if row[0] == 'name':
@@ -30,8 +27,8 @@ def load_skindata():
                          'wear_max' : wear_max})
     return data
 
-def update_prices(data):
-    with open(SKINS_PATH, 'w', encoding='utf8', newline='') as file:
+def update_prices(data, skins_path = './resources/skins.csv'):
+    with open(skins_path, 'w', encoding='utf8', newline='') as file:
         writer = csv.writer(file, delimiter=',')
         toprow = ['NAME', 'COLLECTION', 'RARITY', 'WEAPON', 'WEAR_MIN', 'WEAR_MAX']
         for postfix in ['SELL', 'ST_SELL', 'BUY', 'ST_BUY']:
@@ -56,10 +53,8 @@ def update_prices(data):
             for condition in WEAR_VALUES:
                 sell_prices[condition], buy_prices[condition] = \
                         market.get_csgo_item(f'{weapon} | {name} ({condition})')
-                time.sleep(0.1)
                 sell_prices_stattrak[condition], buy_prices_stattrak[condition] = \
                     market.get_csgo_item(f'StatTrak™ {weapon} | {name} ({condition})')
-                time.sleep(0.1)
 
             print(sell_prices)
             print(sell_prices_stattrak)

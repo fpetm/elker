@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import requests
 import dotenv
@@ -38,6 +39,6 @@ def get_csgo_item(name):
         print(json.dumps(market_item.json(), indent = 2))
         return -1, -1
 
-
+    time.sleep(0.1)
     return (market_item.json()['histogram']['lowest_sell_order'],
             market_item.json()['histogram']['highest_buy_order'])
