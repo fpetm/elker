@@ -46,3 +46,15 @@ add_custom_target(AlwaysCheckGit COMMAND ${CMAKE_COMMAND}
 add_subdirectory(extern)
 add_subdirectory(motek)
 add_subdirectory(elker)
+
+if(NOT PROJECT_IS_TOP_LEVEL)
+  return()
+endif()
+
+# Adding the tests:
+include(CTest)
+
+if(BUILD_TESTING)
+  message(AUTHOR_WARNING "Building Tests")
+  add_subdirectory(test)
+endif()
