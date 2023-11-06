@@ -2,72 +2,110 @@
 import time
 import csv
 import market
+import psycopg
 
 WEAR_VALUES = ('Battle-Scarred', 'Well-Worn', 'Field-Tested', 'Minimal Wear', 'Factory New')
 WEAR_VALUES_SHORT = ('BS', 'WW', 'FT', 'MW', 'FN')
 
-def load_skindata(skindata_path = './resources/skindata.csv'):
-    data = []
-    with open(skindata_path, 'r', encoding='utf8') as file:
-        reader = csv.reader(file, delimiter = ',', quotechar = '"')
-        for row in reader:
-            if row[0] == 'name':
-                continue
-            name = row[0]
-            weapon_type = row[1]
-            rarity = row[2]
-            collection = row[3]
-            wear_min = float(row[4])
-            wear_max = float(row[5])
-            data.append({'name' : name,
-                         'weapon' : weapon_type,
-                         'rarity' : rarity,
-                         'collection' : collection,
-                         'wear_min' : wear_min,
-                         'wear_max' : wear_max})
+def load_skindata():
+    data=[]
+    with psycopg.connect('service=elker') as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT id, name, weapon, collection, rarity, wear_min, wear_max FROM skins')
+            for record in cur.fetchall():
+                data.append({'id' : record[0],
+                             'name' : record[1],
+                             'weapon' : record[2],
+                             'collection' : record[3],
+                             'rarity' : record[4],
+                             'wear_min' : record[5],
+                             'wear_max' : record[6]})
     return data
 
-def update_prices(data, skins_path = './resources/skins.csv'):
-    with open(skins_path, 'w', encoding='utf8', newline='') as file:
-        writer = csv.writer(file, delimiter=',')
-        toprow = ['NAME', 'COLLECTION', 'RARITY', 'WEAPON', 'WEAR_MIN', 'WEAR_MAX']
-        for postfix in ['SELL', 'ST_SELL', 'BUY', 'ST_BUY']:
-            for condition in WEAR_VALUES_SHORT:
-                toprow.append(f'PRICE_{condition}_{postfix}')
-        writer.writerow(toprow)
 
-        for skin in data:
-            collection = skin['collection']
-            rarity = skin['rarity']
-            weapon = skin['weapon']
-            name = skin['name']
-            wear_min = skin['wear_min']
-            wear_max = skin['wear_max']
+def update_prices(data):
+    with psycopg.connect('service=elker') as conn:
+        with conn.cursor() as cur:
+            for skin in data:
+                collection = skin['collection']
+                rarity = skin['rarity']
+                weapon = skin['weapon']
+                name = skin['name']
+                wear_min = skin['wear_min']
+                wear_max = skin['wear_max']
 
-            print(skin)
-            sell_prices = {}
-            sell_prices_stattrak = {}
-            buy_prices = {}
-            buy_prices_stattrak = {}
+                print(skin)
+                sell_prices, sell_volumes = {}, {}
+                sell_prices_stattrak, sell_stattrak_volumes = {}, {}
+                buy_prices, buy_volumes = {}, {}
+                buy_prices_stattrak, buy_stattrak_volumes = {}, {}
 
-            for condition in WEAR_VALUES:
-                sell_prices[condition], buy_prices[condition] = \
-                        market.get_csgo_item(f'{weapon} | {name} ({condition})')
-                sell_prices_stattrak[condition], buy_prices_stattrak[condition] = \
-                    market.get_csgo_item(f'StatTrak™ {weapon} | {name} ({condition})')
+                for condition in WEAR_VALUES:
+                    sell_prices[condition], buy_prices[condition], sell_volumes[condition], buy_volumes[condition] = \
+                            market.get_csgo_item(f'{weapon} | {name} ({condition})')
 
-            print(sell_prices)
-            print(sell_prices_stattrak)
-            print(buy_prices)
-            print(buy_prices_stattrak)
+                    sell_prices_stattrak[condition], buy_prices_stattrak[condition], sell_stattrak_volumes[condition], buy_stattrak_volumes[condition] = \
+                        market.get_csgo_item(f'StatTrak™ {weapon} | {name} ({condition})')
 
-            row = [name, collection, rarity, weapon, wear_min, wear_max]
-            for table in (sell_prices, sell_prices_stattrak, buy_prices, buy_prices_stattrak):
-                for wear in WEAR_VALUES:
-                    row.append(table[wear])
+                print(sell_prices)
+                print(sell_prices_stattrak)
+                print(buy_prices)
+                print(buy_prices_stattrak)
 
-            writer.writerow(row)
+                cur.execute('''
+UPDATE skin_prices SET 
+sell_bs = %s,
+sell_ww = %s,
+sell_ft = %s,
+sell_mw = %s,
+sell_fn = %s,
 
+buy_bs = %s,
+buy_ww = %s,
+buy_ft = %s,
+buy_mw = %s,
+buy_fn = %s,
+
+sell_bs_volume = %s,
+sell_ww_volume = %s,
+sell_ft_volume = %s,
+sell_mw_volume = %s,
+sell_fn_volume = %s,
+
+buy_bs_volume = %s,
+buy_ww_volume = %s,
+buy_ft_volume = %s,
+buy_mw_volume = %s,
+buy_fn_volume = %s,
+
+sell_bs_st = %s,
+sell_ww_st = %s,
+sell_ft_st = %s,
+sell_mw_st = %s,
+sell_fn_st = %s,
+
+buy_bs_st = %s,
+buy_ww_st = %s,
+buy_ft_st = %s,
+buy_mw_st = %s,
+buy_fn_st = %s,
+
+sell_bs_st_volume = %s,
+sell_ww_st_volume = %s,
+sell_ft_st_volume = %s,
+sell_mw_st_volume = %s,
+sell_fn_st_volume = %s,
+
+buy_bs_st_volume = %s,
+buy_ww_st_volume = %s,
+buy_ft_st_volume = %s,
+buy_mw_st_volume = %s,
+buy_fn_st_volume = %s
+WHERE skin_id = %s''', 
+                            [table[wear] for table in (sell_prices, buy_prices, sell_volumes, buy_volumes, sell_prices_stattrak, buy_prices_stattrak, sell_stattrak_volumes, buy_stattrak_volumes) for wear in WEAR_VALUES] + [skin['id']])
+                print(skin['id'])
+
+                conn.commit()
 
 def main():
     data = load_skindata()

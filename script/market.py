@@ -35,10 +35,14 @@ def get_csgo_item(name):
 
     if 'error' in j:
         if j['error'] == 'No matching item found with these parameters':
-            return -1, -1
+            return -1, -1, -1, -1
         print(json.dumps(market_item.json(), indent = 2))
-        return -1, -1
+        return -1, -1, -1, -1
 
     time.sleep(0.1)
-    return (market_item.json()['histogram']['lowest_sell_order'],
-            market_item.json()['histogram']['highest_buy_order'])
+    ret = (market_item.json()['histogram']['lowest_sell_order'],
+            market_item.json()['histogram']['highest_buy_order'],
+            market_item.json()['histogram']['sell_order_summary']['quantity'],
+            market_item.json()['histogram']['buy_order_summary']['quantity'],)
+    print(ret)
+    return ret

@@ -255,8 +255,13 @@ def extract_skins(SKINDATA_PATH = './resources/skindata.csv',
             cur.executemany('''
 INSERT INTO skins (name, rarity, weapon, wear_min, wear_max, collection)
 VALUES (%(name)s, %(rarity)s, %(weapon)s, %(wear_min)s, %(wear_max)s, %(collection)s)''', skins_data)
-
         conn.commit()
+        with conn.cursor() as cur:
+            cur.execute('SELECT id FROM skins')
+            ids = cur.fetchall()
+            cur.executemany('INSERT INTO skin_prices (skin_id) VALUES ( %(id)s )', [{'id':str(e[0])} for e in ids])
+        conn.commit()
+        
 
 def main():
     extract_skins()
