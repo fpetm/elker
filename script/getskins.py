@@ -2,6 +2,7 @@
 import re
 import time
 import csv
+import psycopg
 
 QUOTE = '"'
 J_WHITESPACE = [' ', '\t', '\b', '\n', '\r']
@@ -225,27 +226,38 @@ def extract_skins(SKINDATA_PATH = './resources/skindata.csv',
                                   'weapon' : item['weapon'],
                                   'collection' : collection})
 
-    with open(SKINDATA_PATH, 'w', newline = '', encoding = 'utf8') as file:
-        writer = csv.writer(file, delimiter = ',', quotechar = '"', quoting = csv.QUOTE_MINIMAL)
-        writer.writerow(['name', 'weapon_type', 'rarity', 'collection', 'wear_min', 'wear_max'])
-        for skin in skins:
-            name = skin['paint_kit']['name']
-            tag = skin['paint_kit']['description_tag']
-            #description = skin['paint_kit']['description_string']
-            weapon_type = items[skin['weapon']]['item_name']
-            weapon = skin['weapon']
+    collections = {}
+    for skin in skins:
+        collections[skin['collection']['description']] = skin['collection']
 
-            if not f'[{name}]{weapon}' in skin_rarities:
-                continue
-            rarity = skin_rarities[f'[{name}]{weapon}']['description']
-            collection = skin['collection']['description']
-            wear_min = skin['paint_kit']['wear_min']
-            wear_max = skin['paint_kit']['wear_max']
+    with psycopg.connect('service=elker') as conn:
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM skin_prices')
+            cur.execute('DELETE FROM skins')
+            cur.execute('DELETE FROM collections')
+            cur.executemany('INSERT INTO collections (name) VALUES (%(name)s)', [{'name': v['description']} for k,v in collections.items()])
 
-##          if 'Dust' in collection:
-##              print(skin)
+            skins_data = []
+            for skin in skins:
+                name = skin['paint_kit']['name']
+                tag = skin['paint_kit']['description_tag']
+                #description = skin['paint_kit']['description_string']
+                weapon_type = items[skin['weapon']]['item_name']
+                weapon = skin['weapon']
+            
+                if not f'[{name}]{weapon}' in skin_rarities:
+                    continue
+                rarity = skin_rarities[f'[{name}]{weapon}']['description']
+                collection = skin['collection']['description']
+                wear_min = skin['paint_kit']['wear_min']
+                wear_max = skin['paint_kit']['wear_max']
+                skins_data.append({'name' : tag, 'rarity' : rarity, 'weapon' : weapon_type, 'wear_min' : wear_min, 'wear_max' : wear_max, 'collection' : collection})
+            cur.executemany('''
+INSERT INTO skins (name, rarity, weapon, wear_min, wear_max, collection)
+VALUES (%(name)s, %(rarity)s, %(weapon)s, %(wear_min)s, %(wear_max)s, %(collection)s)''', skins_data)
 
-            writer.writerow([tag, weapon_type, rarity, collection, wear_min, wear_max])
+        conn.commit()
+
 def main():
     extract_skins()
 

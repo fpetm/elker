@@ -1,0 +1,16 @@
+PostgreSQL
+  Full Python support
+  Full C++ support
+Motek
+  Caching
+  Use a better algorithm of reduced ranges
+    Figure out math
+Hatizsak
+  PHP query support
+  Find proxy
+Bepakol
+  Implement algorithm
+Dash
+  Connect systems
+  DEPLOY
+Tests (not important)
