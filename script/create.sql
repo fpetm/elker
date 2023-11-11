@@ -12,6 +12,7 @@ CREATE TYPE skinrarity AS ENUM (
   'Consumer Grade', 'Industrial Grade', 'Mil-Spec Grade', 'Restricted', 'Classified', 'Covert');
 
 CREATE TABLE collections (
+  id SERIAL PRIMARY KEY,
   name VARCHAR(100) UNIQUE NOT NULL
 );
 CREATE TABLE skins (
@@ -19,59 +20,17 @@ CREATE TABLE skins (
   name VARCHAR(100) NOT NULL,
   rarity skinrarity NOT NULL,
   weapon weapontype NOT NULL,
-  wear_max FLOAT, wear_min FLOAT,
-  collection VARCHAR(100) REFERENCES collections(name)
+  wear_min FLOAT, wear_max FLOAT,
+  collection_id SERIAL REFERENCES collections(id)
 );
 
 CREATE TABLE skin_prices (
   skin_id INTEGER,
   CONSTRAINT skin FOREIGN KEY(skin_id) REFERENCES skins(id),
 
-  sell_bs FLOAT,
-  sell_ww FLOAT,
-  sell_ft FLOAT,
-  sell_mw FLOAT,
-  sell_fn FLOAT,
+  sell FLOAT[10],
+  buy FLOAT[10],
 
-  buy_bs FLOAT,
-  buy_ww FLOAT,
-  buy_ft FLOAT,
-  buy_mw FLOAT,
-  buy_fn FLOAT,
-
-  sell_bs_volume INT,
-  sell_ww_volume INT,
-  sell_ft_volume INT,
-  sell_mw_volume INT,
-  sell_fn_volume INT,
-
-  buy_bs_volume INT,
-  buy_ww_volume INT,
-  buy_ft_volume INT,
-  buy_mw_volume INT,
-  buy_fn_volume INT,
-
-  sell_bs_st FLOAT,
-  sell_ww_st FLOAT,
-  sell_ft_st FLOAT,
-  sell_mw_st FLOAT,
-  sell_fn_st FLOAT,
-
-  buy_bs_st FLOAT,
-  buy_ww_st FLOAT,
-  buy_ft_st FLOAT,
-  buy_mw_st FLOAT,
-  buy_fn_st FLOAT,
-
-  sell_bs_st_volume INT,
-  sell_ww_st_volume INT,
-  sell_ft_st_volume INT,
-  sell_mw_st_volume INT,
-  sell_fn_st_volume INT,
-
-  buy_bs_st_volume INT,
-  buy_ww_st_volume INT,
-  buy_ft_st_volume INT,
-  buy_mw_st_volume INT,
-  buy_fn_st_volume INT
+  sell_volume INTEGER[10],
+  buy_volume INTEGER[10]
 );

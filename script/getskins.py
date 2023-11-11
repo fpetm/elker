@@ -253,8 +253,8 @@ def extract_skins(SKINDATA_PATH = './resources/skindata.csv',
                 wear_max = skin['paint_kit']['wear_max']
                 skins_data.append({'name' : tag, 'rarity' : rarity, 'weapon' : weapon_type, 'wear_min' : wear_min, 'wear_max' : wear_max, 'collection' : collection})
             cur.executemany('''
-INSERT INTO skins (name, rarity, weapon, wear_min, wear_max, collection)
-VALUES (%(name)s, %(rarity)s, %(weapon)s, %(wear_min)s, %(wear_max)s, %(collection)s)''', skins_data)
+INSERT INTO skins (name, rarity, weapon, wear_min, wear_max, collection_id)
+VALUES (%(name)s, %(rarity)s, %(weapon)s, %(wear_min)s, %(wear_max)s, (SELECT id FROM collections WHERE name = %(collection)s))''', skins_data)
         conn.commit()
         with conn.cursor() as cur:
             cur.execute('SELECT id FROM skins')
