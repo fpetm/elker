@@ -7,3 +7,6 @@
 [submodule "extern/Catch2"]
 	path = extern/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "extern/libpqxx"]
+	path = extern/libpqxx
+	url = https://github.com/jtv/libpqxx.git
