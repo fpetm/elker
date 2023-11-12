@@ -17,7 +17,7 @@ const std::vector<uint32_t> elker_logo{
     0,
 };
 
-void print_logo(std::vector<uint32_t> logo, char char0 = 32, char char1 = 219) {
+void print_logo(std::vector<uint32_t> logo, char char0 = 32, char char1 = '*') {
   for (const uint16_t line : logo) {
     std::string s;
     for (uint32_t pixel = (0x1 << 14); pixel != 0x0; pixel >>= 1) {
@@ -60,8 +60,7 @@ int main() {
   
   print_logo(elker_logo);
 
-  std::shared_ptr<motek::SkinDB> database =
-      std::make_shared<motek::SkinDB>("./resources/skins.csv");
+  std::shared_ptr<motek::SkinDB> database = motek::SkinDB::FromDatabase("service=elker");
   std::unique_ptr<motek::Calculator> calc =
       std::make_unique<motek::Calculator>(database);
 

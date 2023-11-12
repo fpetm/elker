@@ -166,7 +166,9 @@ private:
 
 class SkinDB {
 public:
-  SkinDB(std::string skinpath);
+  SkinDB() = default;
+  explicit SkinDB(const std::string &skinpath);
+  static std::shared_ptr<SkinDB> FromDatabase(std::string connection_string);
   void AddCollection(SkinCollection &collection) {
     m_Collections.push_back(collection);
     for (auto &skin : collection) {

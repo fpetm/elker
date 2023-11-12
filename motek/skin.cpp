@@ -6,6 +6,8 @@
 #include <sstream>
 #include <vector>
 
+#include <pqxx/pqxx>
+
 namespace motek {
 std::vector<std::vector<std::string>> parseCSV(const std::string &filename) {
   std::vector<std::vector<std::string>> data;
@@ -289,7 +291,114 @@ inline bool CollectionFilter(std::string collectionname) {
   return true;
 }
 
-SkinDB::SkinDB(std::string skinpath) {
+std::shared_ptr<SkinDB> SkinDB::FromDatabase(std::string connection_string) {
+  std::shared_ptr<SkinDB> db = std::make_shared<SkinDB>();
+  pqxx::connection connection(connection_string);
+  pqxx::work w(connection);
+  pqxx::result colls = w.exec("SELECT id, name FROM collections");
+  pqxx::result skins = w.exec(R"(
+SELECT skins.id, skins.name, skins.rarity, skins.weapon, skins.wear_min, skins.wear_max, skins.collection_id, skin_prices.buy, skin_prices.sell
+FROM skins INNER JOIN skin_prices ON skins.id = skin_prices.skin_id
+)");
+  w.commit();
+
+  for (pqxx::row row : colls) {
+    db->m_Collections.emplace_back(row[1].as<std::string>(), row[0].as<size_t>());
+  }
+  for (pqxx::row row : skins) {
+    auto name = row[1].as<std::string>();
+    WeaponType type = WeaponTypeFromString(row[3].as<std::string>());
+    auto collection_id = row[6].as<size_t>();
+    auto rarity = SkinRarity::Contraband;
+    std::array<float, SkinCondition::Max> price_sell = {0}, price_buy = {0};
+    auto wear_min = row[4].as<float>();
+    auto wear_max = row[5].as<float>();
+
+    if (row[2].as<std::string>() == "Consumer Grade") {
+      rarity = SkinRarity::Consumer;
+    } else if (row[2].as<std::string>() == "Industrial Grade") {
+      rarity = SkinRarity::Industrial;
+    } else if (row[2].as<std::string>() == "Mil-Spec Grade") {
+      rarity = SkinRarity::MilSpec;
+    } else if (row[2].as<std::string>() == "Restricted") {
+      rarity = SkinRarity::Restricted;
+    } else if (row[2].as<std::string>() == "Classified") {
+      rarity = SkinRarity::Classified;
+    } else if (row[2].as<std::string>() == "Covert") {
+      rarity = SkinRarity::Covert;
+    } else if (row[2].as<std::string>() == "Contraband") {
+      continue;
+    } else {
+      MT_ERROR("Unknown rarity (skin: {} | {}): {}", StringFromWeaponType(type), name, row[2].as<std::string>());
+    }
+
+    auto buy_arr = row[7].as_array(), sell_arr = row[8].as_array();
+    size_t index = 0;
+    std::pair<pqxx::array_parser::juncture, std::string> elem;
+
+    index = 0;
+    do {
+      elem = buy_arr.get_next();
+      if (elem.first == pqxx::array_parser::juncture::string_value) {
+        price_buy[index] = std::stof(elem.second);
+        index++;
+      }
+    } while (elem.first != pqxx::array_parser::juncture::done);
+
+    index = 0;
+    do {
+      elem = sell_arr.get_next();
+      if (elem.first == pqxx::array_parser::juncture::string_value) {
+        price_sell[index] = std::stof(elem.second);
+        index++;
+      }
+    } while (elem.first != pqxx::array_parser::juncture::done);
+
+    for (SkinCollection &coll : db->m_Collections) {
+      if (coll.m_ID == collection_id) {
+        coll.AddSkin(Skin(name, price_sell, price_buy, rarity, type,
+                          static_cast<wear_t>(wear_min * g_WearRangeMax),
+                          static_cast<wear_t>(wear_max * g_WearRangeMax),
+                          db->m_Skins.size(), coll.m_ID,
+                          db->m_SkinIDsByRarity[rarity].size()));
+        db->m_SkinIDsByRarity[rarity].push_back(db->m_Skins.size());
+        db->m_Skins.push_back(coll.LastSkin());
+      }
+    }
+  }
+
+  for (SkinCollection &collection : db->m_Collections) {
+    SkinRarity highest = SkinRarity::Consumer;
+    for (Skin skin : collection) {
+      highest = highest < skin.m_Rarity ? skin.m_Rarity : highest;
+    }
+    collection.m_HighestRarity = highest;
+    for (SkinCondition condition :
+         {BS, WW, FT, MW, FN, BS_ST, WW_ST, FT_ST, MW_ST, FN_ST}) {
+      for (Skin &skin : collection) {
+        if (skin.m_Rarity >= collection.m_HighestRarity ||
+            skin.m_PricesSell[condition] <= 0.03f ||
+            skin.m_PricesBuy[condition] <= 0.03f) {
+          skin.m_Banned[condition] = true;
+          db->m_Skins[skin.m_ID].m_Banned[condition] = true;
+        } else {
+          skin.m_Banned[condition] = false;
+          db->m_Skins[skin.m_ID].m_Banned[condition] = false;
+        }
+      }
+    }
+    for (Skin &skin : collection) {
+      collection.m_SkinsByRarity[skin.m_Rarity].push_back(skin);
+    }
+  }
+
+  MT_INFO("Succesfully loaded {} skins and {} collections!", db->m_Skins.size(),
+          db->m_Collections.size());
+
+  return db;
+}
+
+SkinDB::SkinDB(const std::string &skinpath) {
   auto data = parseCSV(skinpath);
 
   for (auto &row : data) {
@@ -391,7 +500,6 @@ SkinDB::SkinDB(std::string skinpath) {
       collection.m_SkinsByRarity[skin.m_Rarity].push_back(skin);
     }
   }
-
   MT_INFO("Succesfully loaded {} skins and {} collections!", m_Skins.size(),
           m_Collections.size());
 }
